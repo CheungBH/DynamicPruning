@@ -23,7 +23,7 @@ torch.manual_seed(123123)
 parser = argparse.ArgumentParser(description='PyTorch CIFAR-10 Training')
 parser.add_argument('--lr', '-lr', type=float, default=0.1, help='initial learning rate')
 parser.add_argument('--wt_decay', '-wd', type=float, default=1e-4, help='weight decaying')
-parser.add_argument('--save', '-s', action='store_true', help='save the model')
+parser.add_argument('--save', '-s', type=str, default="weights/test", help='save the model')
 parser.add_argument('--test', '-t', action='store_true', help='test only')
 parser.add_argument('--path', '-p', type=str, default=None, help='saved model path')
 parser.add_argument('--partitions', '-pt', type=int, default=4, help='number of partitions')
@@ -49,7 +49,8 @@ _LEARNING_RATE = args.lr
 _WEIGHT_DECAY = args.wt_decay
 _ARCH = "resnet-20"
 this_file_path = os.path.dirname(os.path.abspath(__file__))
-save_folder = os.path.join(this_file_path, 'save_CIFAR10_model')
+save_folder = args.save
+log_file = os.path.join(save_folder, "log.txt")
 #########################
 
 #----------------------------
@@ -71,12 +72,12 @@ def load_cifar10():
         ])
 
     # pin_memory=True makes transfering data from host to GPU faster
-    trainset = torchvision.datasets.CIFAR10(root='../data', train=True,
+    trainset = torchvision.datasets.CIFAR10(root='../../dynamic/data', train=True,
                                             download=True, transform=transform_train)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
                                               shuffle=True, num_workers=0, pin_memory=True)
 
-    testset = torchvision.datasets.CIFAR10(root='../data', train=False,
+    testset = torchvision.datasets.CIFAR10(root='../../dynamic/data', train=False,
                                            download=True, transform=transform_test)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
                                              shuffle=False, num_workers=0, pin_memory=True)
@@ -204,7 +205,7 @@ def train_model(trainloader, testloader, net, device):
 
             if i % 50 == 49:    
                 # print statistics every 100 mini-batches each epoch
-                progress.display(i) # i = batch id in the epoch
+                progress.display(i, log_file) # i = batch id in the epoch
 
         # update the learning rate
         scheduler.step()
@@ -213,11 +214,12 @@ def train_model(trainloader, testloader, net, device):
         if epoch % 10 == 9:
             print('epoch {}'.format(epoch+1))
             test_accu(testloader, net, device)
+            util.save_models(net.state_dict(), save_folder, suffix=str(epoch+1))
 
     # save the model if required
     if args.save:
         print("Saving the trained model.")
-        util.save_models(net.state_dict(), save_folder, suffix=_ARCH)
+        util.save_models(net.state_dict(), save_folder, suffix="best")
 
     print('Finished Training')
 
@@ -260,9 +262,13 @@ def test_accu(testloader, net, device):
 
     print('Accuracy of the network on the 10000 test images: %.1f %%' % (
         100 * correct / total))
+    with open(log_file, "a+") as log:
+        log.write('Accuracy of the network on the 10000 test images: %.1f %%' % (
+        100 * correct / total) + "\n")
     if args.use_cg:
         print('Sparsity of the update phase: %.1f %%' % (100-np.sum(cnt_full)*1.0/np.sum(cnt_out)*100))
-
+        with open(log_file, "a+") as log:
+            log.write('Sparsity of the update phase: %.1f %%' % (100-np.sum(cnt_full)*1.0/np.sum(cnt_out)*100))
 
 #----------------------------
 # Test accuracy per class
