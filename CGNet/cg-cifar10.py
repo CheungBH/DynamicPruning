@@ -50,6 +50,7 @@ _WEIGHT_DECAY = args.wt_decay
 _ARCH = "resnet-20"
 this_file_path = os.path.dirname(os.path.abspath(__file__))
 save_folder = args.save
+os.makedirs(save_folder, exist_ok=True)
 log_file = os.path.join(save_folder, "log.txt")
 #########################
 
@@ -72,12 +73,12 @@ def load_cifar10():
         ])
 
     # pin_memory=True makes transfering data from host to GPU faster
-    trainset = torchvision.datasets.CIFAR10(root='../../dynamic/data', train=True,
+    trainset = torchvision.datasets.CIFAR10(root='../data', train=True,
                                             download=True, transform=transform_train)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
                                               shuffle=True, num_workers=0, pin_memory=True)
 
-    testset = torchvision.datasets.CIFAR10(root='../../dynamic/data', train=False,
+    testset = torchvision.datasets.CIFAR10(root='../data', train=False,
                                            download=True, transform=transform_test)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
                                              shuffle=False, num_workers=0, pin_memory=True)
