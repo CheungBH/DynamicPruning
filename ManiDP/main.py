@@ -50,7 +50,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 parser = argparse.ArgumentParser(description='Training on CIFAR or ImageNet',formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--data_path', type=str, default='/cache/tyh/cifar10/',help='Path to dataset')
+parser.add_argument('--data_path', type=str, default='../data/',help='Path to dataset')
 parser.add_argument('--dataset', type=str,default='cifar10', choices=['cifar10', 'imagenet'],
                     help='Choose between Cifar10/100 and ImageNet.')
 parser.add_argument('--arch', metavar='ARCH', default='dyresnet20')
