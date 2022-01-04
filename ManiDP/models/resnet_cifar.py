@@ -56,10 +56,9 @@ class MaskBlock(nn.Module):
         if self.training:
             self.mask_sum.add_(mask_before.data.sum(dim=0)) #
         
-        tmp=torch.ones_like(mask_before)
-        tmp[mask_before.data<self.thre]=0 
-        mask=mask_before*tmp
-        
+        mask=torch.ones_like(mask_before)
+        mask[mask_before.data<self.thre]=0
+
         return mask,_lasso,mask_before
 
  
