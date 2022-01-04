@@ -557,7 +557,7 @@ for epoch in range(0, args.epochs):
   
     epoch_time.update(time.time() - start_time)
     start_time = time.time() 
-acc,acc5, loss = validate(test_loader, net, criterion, None)
+acc,acc5, loss = validate(test_loader, net, criterion, log_file)
 print('last acc:',acc)
 print('best acc:',recorder.max_accuracy(False))
 with open(log_file, "a+") as log:

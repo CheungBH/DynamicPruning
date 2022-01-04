@@ -57,7 +57,7 @@ class MaskBlock(nn.Module):
             self.mask_sum.add_(mask_before.data.sum(dim=0)) 
         
         mask=torch.ones_like(mask_before)
-        mask[mask_before.data<self.thre]=0 
+        mask[mask_before.data<self.thre]=0
         
         return mask,_lasso,mask_before
 
