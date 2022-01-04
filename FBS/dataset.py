@@ -11,9 +11,9 @@ def get_loader(batch_size, num_workers):
     ])
 
     train_data = torchvision.datasets.CIFAR10(
-        '../ViT-cifar10-pruning/data', train=True, transform=transform, download=True)
+        '../data', train=True, transform=transform, download=True)
     test_data = torchvision.datasets.CIFAR10(
-        '../ViT-cifar10-pruning/data', train=False, transform=transform, download=True)
+        '../data', train=False, transform=transform, download=True)
 
     train_loader = DataLoader(train_data, batch_size=batch_size,
                               shuffle=True, num_workers=num_workers, pin_memory=True)
