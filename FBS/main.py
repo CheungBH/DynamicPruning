@@ -9,7 +9,6 @@ from dataset import get_loader
 from model import CifarNet
 import utils
 
-
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
@@ -31,7 +30,7 @@ parser.add_argument(
 parser.add_argument(
     '--epochs',
     type=int,
-    default=500
+    default=100
 )
 parser.add_argument(
     '--batch_size',
@@ -41,7 +40,7 @@ parser.add_argument(
 parser.add_argument(
     '--lr',
     type=float,
-    default=1e-3
+    default=1e-2
 )
 
 parser.add_argument(
@@ -69,7 +68,6 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-
 os.makedirs(args.ckpt_path, exist_ok=True)
 with open(f'{args.ckpt_path}/train_log_{args.fbs}_{args.sparsity_ratio}.tsv', 'w') as log_file:
     log_file.write(
@@ -79,18 +77,19 @@ utils.set_seed(args.seed)
 train_loader, test_loader = get_loader(args.batch_size, args.num_worker)
 model = CifarNet(fbs=args.fbs, sparsity_ratio=args.sparsity_ratio).cuda()
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.0001)
+scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, [30, 60, 80], 0.2)
 
 # TODO: initialize current model parameters with previous model parameters
 if args.fbs:
-    if args.sparsity_ratio == 1.0 :
+    if args.sparsity_ratio == 1.0:
         base_state_dict = torch.load(args.pretrained)
         model_state_dict = model.state_dict()
 
         for k, v in model_state_dict.items():
             if 'conv' in k:
                 model_state_dict[k] = base_state_dict[k]
-        
+
         model.load_state_dict(model_state_dict)
 
     else:
@@ -98,13 +97,13 @@ if args.fbs:
         model_state_dict = model.state_dict()
 
         for k, v in model_state_dict.items():
-            if 'weight' in k or 'bias' in k :
+            if 'weight' in k or 'bias' in k:
                 model_state_dict[k] = base_state_dict[k]
 
         model.load_state_dict(model_state_dict)
 
 best_acc = 0.
-for epoch in range(1, args.epochs+1):
+for epoch in range(1, args.epochs + 1):
     print(f'Epoch: {epoch}')
 
     train_loss = 0
@@ -134,7 +133,8 @@ for epoch in range(1, args.epochs+1):
         correct_num += pred_lb_batch.eq(lb_batch).sum().item()
 
     train_loss = train_loss / total_step
-    train_acc = 100.*correct_num/total_num
+    train_acc = 100. * correct_num / total_num
+    scheduler.step()
 
     with torch.no_grad():
         test_loss = 0
@@ -153,14 +153,14 @@ for epoch in range(1, args.epochs+1):
             else:
                 pred_batch, lasso = model(img_batch, True)
                 loss = criterion(pred_batch, lb_batch) + lasso * args.lasso_lambda
-            
+
             test_loss += loss.item()
             _, pred_lb_batch = pred_batch.max(dim=1)
             total_num += lb_batch.shape[0]
             correct_num += pred_lb_batch.eq(lb_batch).sum().item()
 
         test_loss = test_loss / total_step
-        test_acc = 100.*correct_num/total_num
+        test_acc = 100. * correct_num / total_num
 
     if test_acc > best_acc:
         best_acc = test_acc
