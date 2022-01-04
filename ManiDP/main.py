@@ -50,7 +50,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 parser = argparse.ArgumentParser(description='Training on CIFAR or ImageNet',formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--data_path', type=str, default='/cache/tyh/cifar10/',help='Path to dataset')
+parser.add_argument('--data_path', type=str, default='../data/',help='Path to dataset')
 parser.add_argument('--dataset', type=str,default='cifar10', choices=['cifar10', 'imagenet'],
                     help='Choose between Cifar10/100 and ImageNet.')
 parser.add_argument('--arch', metavar='ARCH', default='dyresnet20')
@@ -557,7 +557,7 @@ for epoch in range(0, args.epochs):
   
     epoch_time.update(time.time() - start_time)
     start_time = time.time() 
-acc,acc5, loss = validate(test_loader, net, criterion, None)
+acc,acc5, loss = validate(test_loader, net, criterion, log_file)
 print('last acc:',acc)
 print('best acc:',recorder.max_accuracy(False))
 with open(log_file, "a+") as log:
