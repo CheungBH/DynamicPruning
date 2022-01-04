@@ -24,7 +24,7 @@ parser.add_argument('--model', default='R110_C10', help='R<depth>_<dataset> see 
 parser.add_argument('--data_dir', default='data/', help='data directory')
 parser.add_argument('--load', default=None, help='checkpoint to load rnet+agent from')
 parser.add_argument('--pretrained', default=None, help='pretrained policy model checkpoint (from curriculum training)')
-parser.add_argument('--cv_dir', default='cv/tmp/', help='checkpoint directory (models and logs are saved here)')
+parser.add_argument('--cv_dir', default='weight_ft/test/', help='checkpoint directory (models and logs are saved here)')
 parser.add_argument('--batch_size', type=int, default=256, help='batch size')
 parser.add_argument('--epoch_step', type=int, default=1600, help='epochs after which lr is decayed')
 parser.add_argument('--max_epochs', type=int, default=2000, help='total epochs to run')
@@ -38,6 +38,8 @@ args = parser.parse_args()
 if not os.path.exists(args.cv_dir):
     os.system('mkdir ' + args.cv_dir)
 utils.save_args(__file__, args)
+log_file = os.path.join(args.cv_dir, "log.txt")
+
 
 def get_reward(preds, targets, policy):
 
@@ -106,6 +108,8 @@ def train(epoch):
 
     log_str = 'E: %d | A: %.3f | R: %.2E | S: %.3f | V: %.3f | #: %d'%(epoch, accuracy, reward, sparsity, variance, len(policy_set))
     print(log_str)
+    with open(log_file, "a+") as log:
+        log.write(log_str + "\n")
 
     log_value('train_accuracy', accuracy, epoch)
     log_value('train_reward', reward, epoch)
@@ -144,6 +148,8 @@ def test(epoch):
 
     log_str = 'TS - A: %.3f | R: %.2E | S: %.3f | V: %.3f | #: %d'%(accuracy, reward, sparsity, variance, len(policy_set))
     print(log_str)
+    with open(log_file, "a+") as log:
+        log.write(log_str + "\n")
 
     log_value('test_accuracy', accuracy, epoch)
     log_value('test_reward', reward, epoch)
