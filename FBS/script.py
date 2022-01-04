@@ -1,10 +1,10 @@
 import os
 
-#print('EXECUTE : python main.py')
-#os.system('python main.py')
+print('EXECUTE : python main.py')
+os.system('python main.py')
 
-# print('EXECUTE : python main.py --fbs 1 --sparsity_ratio 1.0 --pretrained checkpoints/best_False_1.0.pt --epochs 500')
-# os.system('python main.py --fbs 1 --sparsity_ratio 1.0 --pretrained checkpoints/best_False_1.0.pt --epochs 500')
+print('EXECUTE : python main.py --fbs 1 --sparsity_ratio 1.0 --pretrained checkpoints/best_False_1.0.pt --epochs 500')
+os.system('python main.py --fbs 1 --sparsity_ratio 1.0 --pretrained checkpoints/best_False_1.0.pt --epochs 500')
 
 print('EXECUTE : python main.py --fbs 1 --sparsity_ratio 0.9 --pretrained checkpoints/best_True_1.0.pt --epochs 500')
 os.system('python main.py --fbs 1 --sparsity_ratio 0.9 --pretrained checkpoints/best_True_1.0.pt --epochs 500')
@@ -26,3 +26,6 @@ os.system('python main.py --fbs 1 --sparsity_ratio 0.4 --pretrained checkpoints/
 
 print('EXECUTE : python main.py --fbs 1 --sparsity_ratio 0.3 --pretrained checkpoints/best_True_0.4.pt --epochs 500')
 os.system('python main.py --fbs 1 --sparsity_ratio 0.3 --pretrained checkpoints/best_True_0.4.pt --epochs 500')
+
+print('EXECUTE : python main.py --fbs 1 --sparsity_ratio 0.2 --pretrained checkpoints/best_True_0.4.pt --epochs 500')
+os.system('python main.py --fbs 1 --sparsity_ratio 0.2 --pretrained checkpoints/best_True_0.3.pt --epochs 500')
