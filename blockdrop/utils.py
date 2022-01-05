@@ -164,7 +164,7 @@ def get_dataset(model, root='data/'):
         testset = torchdata.CIFAR100(root=root, train=False, download=True, transform=transform_test)
     elif dset=='ImgNet':
         trainset = torchdata.ImageFolder(root+'/train/', transform_train)
-        testset = torchdata.ImageFolder(root+'/val/', transform_test)
+        testset = torchdata.ImageFolder(root+'/validation/', transform_test)
 
     return trainset, testset
 
