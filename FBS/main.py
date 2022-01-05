@@ -40,7 +40,7 @@ parser.add_argument(
 parser.add_argument(
     '--lr',
     type=float,
-    default=1e-2
+    default=1e-3
 )
 
 parser.add_argument(
@@ -77,8 +77,8 @@ utils.set_seed(args.seed)
 train_loader, test_loader = get_loader(args.batch_size, args.num_worker)
 model = CifarNet(fbs=args.fbs, sparsity_ratio=args.sparsity_ratio).cuda()
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.0001)
-scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, [30, 60, 80], 0.2)
+optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
+scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, [350, 450], 0.1)
 
 # TODO: initialize current model parameters with previous model parameters
 if args.fbs:
