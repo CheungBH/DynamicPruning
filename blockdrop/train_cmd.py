@@ -30,3 +30,14 @@ for idx, cmd in enumerate(cmds):
     log.write("\n")
     # print("Processing cmd {}".format(idx))
     os.system(cmd)
+
+
+'''
+RESNET101
+python test.py --model R110_C10 --load cv/finetuned/R110_C10_gamma_10/ckpt_E_2000_A_0.936_R_1.95E-01_S_16.93_#_469.t7
+python test.py --model R110_C10
+
+RESNET34
+python test.py --model R32_C10 --load cv/finetuned/R32_C10_gamma_5/ckpt_E_730_A_0.913_R_2.73E-01_S_6.92_#_53.t7
+python test.py --model R32_C10 
+'''
