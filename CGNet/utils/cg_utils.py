@@ -166,8 +166,6 @@ class CGConv2d(nn.Conv2d):
         2. compute Yp
         3. generate gating decision d
         """
-        if self.p == 0:
-            return F.conv2d(input, self.weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
         if self.shuffle:
             input = channel_shuffle(input, self.p) 
         Yp = F.conv2d(input, self.weight * self.mask, self.bias, self.stride, self.padding, self.dilation, self.groups)
