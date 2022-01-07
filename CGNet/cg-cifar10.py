@@ -124,9 +124,9 @@ def generate_model(model_arch):
             return m.resnet20(**kwargs)
         else:
             if args.use_postact:
-                import model.cifar10_resnet_postact as m
+                import model.cg_cifar10_resnet_postact as m
             else:
-                import model.cifar10_resnet as m
+                import model.cg_cifar10_resnet as m
             return m.resnet20()
     else:
         raise NotImplementedError("Model architecture is not supported.")
