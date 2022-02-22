@@ -20,7 +20,7 @@ import models
 
 cudnn.benchmark = True
 
-device = 'cpu'
+device = 'cuda:0'
 
 def main():
     parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training with sparse masks')
@@ -36,6 +36,7 @@ def main():
     # parser.add_argument('--resnet_n', default=5, type=int, help='number of layers per resnet stage (5 for Resnet-32)')
     parser.add_argument('--budget', default=-1, type=float, help='computational budget (between 0 and 1) (-1 for no sparsity)')
     parser.add_argument('-s', '--save_dir', type=str, default='', help='directory to save model')
+    parser.add_argument('-p', '--pretrain', type=str, default='', help='load pretrain model')
     parser.add_argument('-r', '--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
     parser.add_argument('-e', '--evaluate', action='store_true', help='evaluation mode')
@@ -120,7 +121,9 @@ def main():
                 raise ValueError(msg)
             else:
                 print(msg)
-
+    elif args.pretrain:
+        checkpoint = torch.load(resume_path, map_location=device)
+        model.load_state_dict(checkpoint['state_dict'])
 
     try:
         lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
