@@ -6,5 +6,6 @@
 blockdrop/cv/
 data
 *train_log.log
-
+dynconv/exp
+`
 
