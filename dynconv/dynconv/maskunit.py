@@ -3,6 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from utils import logger
 
+dilate = False
+
 
 class Mask():
     '''
@@ -11,30 +13,32 @@ class Mask():
     hard: the hard/binary mask (1 or 0), 4-dim tensor
     soft (optional): the float mask, same shape as hard
     active_positions: the amount of positions where hard == 1
-    total_positions: the total amount of positions 
+    total_positions: the total amount of positions
                         (typically batch_size * output_width * output_height)
     '''
+
     def __init__(self, hard, soft=None):
         assert hard.dim() == 4
         assert hard.shape[1] == 1
         assert soft is None or soft.shape == hard.shape
 
         self.hard = hard
-        self.active_positions = torch.sum(hard) # this must be kept backpropagatable!
+        self.active_positions = torch.sum(hard)  # this must be kept backpropagatable!
         self.total_positions = hard.numel()
         self.soft = soft
-        
+
         self.flops_per_position = 0
-    
+
     def size(self):
         return self.hard.shape
 
     def __repr__(self):
         return f'Mask with {self.active_positions}/{self.total_positions} positions, and {self.flops_per_position} accumulated FLOPS per position'
 
+
 class MaskUnit(nn.Module):
-    ''' 
-    Generates the mask and applies the gumbel softmax trick 
+    '''
+    Generates the mask and applies the gumbel softmax trick
     '''
 
     def __init__(self, channels, stride=1, dilate_stride=1):
@@ -50,8 +54,11 @@ class MaskUnit(nn.Module):
 
         hard_dilate = self.expandmask(mask.hard)
         mask_dilate = Mask(hard_dilate)
-        
-        m = {'std': mask, 'dilate': mask_dilate}
+
+        if dilate:
+            m = {'std': mask, 'dilate': mask_dilate}
+        else:
+            m = {'std': mask, 'dilate': mask}
         meta['masks'].append(m)
         return m
 
@@ -59,9 +66,10 @@ class MaskUnit(nn.Module):
 ## Gumbel
 
 class Gumbel(nn.Module):
-    ''' 
-    Returns differentiable discrete outputs. Applies a Gumbel-Softmax trick on every element of x. 
     '''
+    Returns differentiable discrete outputs. Applies a Gumbel-Softmax trick on every element of x.
+    '''
+
     def __init__(self, eps=1e-8):
         super(Gumbel, self).__init__()
         self.eps = eps
@@ -76,8 +84,8 @@ class Gumbel(nn.Module):
         if gumbel_noise:
             eps = self.eps
             U1, U2 = torch.rand_like(x), torch.rand_like(x)
-            g1, g2 = -torch.log(-torch.log(U1 + eps)+eps), - \
-                torch.log(-torch.log(U2 + eps)+eps)
+            g1, g2 = -torch.log(-torch.log(U1 + eps) + eps), - \
+                torch.log(-torch.log(U2 + eps) + eps)
             x = x + g1 - g2
 
         soft = torch.sigmoid(x / gumbel_temp)
@@ -85,10 +93,11 @@ class Gumbel(nn.Module):
         assert not torch.any(torch.isnan(hard))
         return hard
 
+
 ## Mask convs
 class Squeeze(nn.Module):
-    """ 
-    Squeeze module to predict masks 
+    """
+    Squeeze module to predict masks
     """
 
     def __init__(self, channels, stride=1):
@@ -105,20 +114,20 @@ class Squeeze(nn.Module):
         z = self.conv(x)
         return z + y.expand_as(z)
 
+
 class ExpandMask(nn.Module):
-    def __init__(self, stride, padding=1): 
+    def __init__(self, stride, padding=1):
         super(ExpandMask, self).__init__()
-        self.stride=stride
+        self.stride = stride
         self.padding = padding
-        
 
     def forward(self, x):
         assert x.shape[1] == 1
 
         if self.stride > 1:
-            self.pad_kernel = torch.zeros( (1,1,self.stride, self.stride), device=x.device)
-            self.pad_kernel[0,0,0,0] = 1
-        self.dilate_kernel = torch.ones((1,1,1+2*self.padding,1+2*self.padding), device=x.device)
+            self.pad_kernel = torch.zeros((1, 1, self.stride, self.stride), device=x.device)
+            self.pad_kernel[0, 0, 0, 0] = 1
+        self.dilate_kernel = torch.ones((1, 1, 1 + 2 * self.padding, 1 + 2 * self.padding), device=x.device)
 
         x = x.float()
         if self.stride > 1:
