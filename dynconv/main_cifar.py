@@ -122,7 +122,7 @@ def main():
             else:
                 print(msg)
     elif args.pretrain:
-        checkpoint = torch.load(resume_path, map_location=device)
+        checkpoint = torch.load(args.pretrain, map_location=device)
         model.load_state_dict(checkpoint['state_dict'])
 
     try:

@@ -76,6 +76,8 @@ def main():
     net_module = models.__dict__[args.model]
     model = net_module(sparse=args.budget >= 0, pretrained=args.pretrained).to(device=device)
 
+    file_path = os.path.join(args.save_dir, "log.txt")
+
     ## CRITERION
     class Loss(nn.Module):
         def __init__(self):
@@ -146,11 +148,11 @@ def main():
 
         # train for one epoch
         print('current lr {:.5e}'.format(optimizer.param_groups[0]['lr']))
-        train(args, train_loader, model, criterion, optimizer, epoch)
+        train(args, train_loader, model, criterion, optimizer, epoch, file_path)
         lr_scheduler.step()
 
         # evaluate on validation set
-        prec1 = validate(args, val_loader, model, criterion, epoch)
+        prec1 = validate(args, val_loader, model, criterion, epoch, file_path)
 
         # remember best prec@1 and save checkpoint
         is_best = prec1 > best_prec1
@@ -164,7 +166,7 @@ def main():
 
         print(f" * Best prec1: {best_prec1}")
 
-def train(args, train_loader, model, criterion, optimizer, epoch):
+def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     """
     Run one train epoch
     """
@@ -194,9 +196,13 @@ def train(args, train_loader, model, criterion, optimizer, epoch):
         loss.backward()
         optimizer.step()
 
-        logger.tick()
+        if file_path:
+            with open(file_path, "a+") as f:
+                logger.tick(f)
+                f.write("Train: Epoch {}, Prec@1 {}".format(file_path, round(top1.avg, 4)))
 
-def validate(args, val_loader, model, criterion, epoch):
+
+def validate(args, val_loader, model, criterion, epoch, file_path=None):
     """
     Run evaluation
     """
@@ -231,6 +237,11 @@ def validate(args, val_loader, model, criterion, epoch):
     print(f'* Epoch {epoch} - Prec@1 {top1.avg:.3f}')
     print(f'* average FLOPS (multiply-accumulates, MACs) per image:  {model.compute_average_flops_cost()[0]/1e6:.6f} MMac')
     model.stop_flops_count()
+    if file_path:
+        with open(file_path, "a+") as f:
+            f.write("Validation: Epoch {}, Prec@1 {}, ave FLOPS per image: {} MMac".
+                    format(file_path, round(top1.avg, 4), round(model.compute_average_flops_cost()[0]/1e6), 6))
+
     return top1.avg
 
 
