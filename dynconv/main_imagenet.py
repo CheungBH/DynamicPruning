@@ -171,6 +171,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     Run one train epoch
     """
     model.train()
+    top1 = utils.AverageMeter()
 
     if epoch < args.lr_decay[0]:
         gumbel_temp = 5.0
@@ -190,6 +191,8 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
         meta = {'masks': [], 'device': device, 'gumbel_temp': gumbel_temp, 'gumbel_noise': gumbel_noise, 'epoch': epoch}
         output, meta = model(input, meta)
         loss = criterion(output, target, meta)
+        prec1 = utils.accuracy(output.data, target)[0]
+        top1.update(prec1.item(), input.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
