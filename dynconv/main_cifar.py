@@ -70,7 +70,7 @@ def main():
 
     ## MODEL
     net_module = models.__dict__[args.model]
-    model = net_module(sparse=args.budget >= 0, pretrained=args.pretrained).to(device=device)
+    model = net_module(sparse=args.budget >= 0).to(device=device)
 
     file_path = os.path.join(args.save_dir, "log.txt")
 
