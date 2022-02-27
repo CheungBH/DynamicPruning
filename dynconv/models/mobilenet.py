@@ -70,6 +70,7 @@ class MobileNetV2(nn.Module):
     def __init__(self,
                  num_classes=1000,
                  width_mult=1.0,
+                 sparse=False,
                  inverted_residual_setting=None,
                  round_nearest=8,
                  block=None,
@@ -96,7 +97,7 @@ class MobileNetV2(nn.Module):
             norm_layer = nn.BatchNorm2d
 
         input_channel = 32
-        last_channel = 1280
+        last_channel = 500
 
         if inverted_residual_setting is None:
             inverted_residual_setting = [
@@ -104,10 +105,10 @@ class MobileNetV2(nn.Module):
                 [1, 16, 1, 1],
                 [6, 24, 2, 2],
                 [6, 32, 3, 2],
-                [6, 64, 4, 2],
-                [6, 96, 3, 1],
-                [6, 160, 3, 2],
-                [6, 320, 1, 1],
+                [6, 48, 4, 2],
+                [6, 64, 3, 1],
+                [6, 72, 3, 2],
+                [6, 80, 1, 1],
             ]
 
         # only check the first element, assuming user knows t,c,n,s are required
@@ -150,27 +151,14 @@ class MobileNetV2(nn.Module):
                 nn.init.normal_(m.weight, 0, 0.01)
                 nn.init.zeros_(m.bias)
 
-    def _forward_impl(self, x):
+    def forward(self, x, meta):
         # This exists since TorchScript doesn't support inheritance, so the superclass method
         # (this one) needs to have a name other than `forward` that can be accessed in a subclass
         x = self.features(x)
         # Cannot use "squeeze" as batch-size can be 1 => must use reshape with x.shape[0]
         x = nn.functional.adaptive_avg_pool2d(x, 1).reshape(x.shape[0], -1)
         x = self.classifier(x)
-        return x
-
-    def forward(self, x):
-        return self._forward_impl(x)
+        return x, meta
 
 
-def mobilenet_v2(pretrained=False, progress=True, **kwargs):
-    """
-    Constructs a MobileNetV2 architecture from
-    `"MobileNetV2: Inverted Residuals and Linear Bottlenecks" <https://arxiv.org/abs/1801.04381>`_.
 
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-        progress (bool): If True, displays a progress bar of the download to stderr
-    """
-    model = MobileNetV2(**kwargs)
-    return model

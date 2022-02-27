@@ -41,7 +41,6 @@ def main():
                     help='ImageNet dataset root')
     parser.add_argument('-e', '--evaluate', action='store_true', help='evaluation mode')
     parser.add_argument('--plot_ponder', action='store_true', help='plot ponder cost')
-    parser.add_argument('--pretrained', action='store_true', help='start from pretrained model')
     parser.add_argument('--workers', default=8, type=int, help='number of dataloader workers')
     args =  parser.parse_args()
     print('Args:', args)
@@ -74,7 +73,7 @@ def main():
 
     ## MODEL
     net_module = models.__dict__[args.model]
-    model = net_module(sparse=args.budget >= 0, pretrained=args.pretrained).to(device=device)
+    model = net_module(sparse=args.budget >= 0).to(device=device)
 
     file_path = os.path.join(args.save_dir, "log.txt")
 
