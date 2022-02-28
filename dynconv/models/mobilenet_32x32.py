@@ -1,4 +1,5 @@
 from torch import nn
+import dynconv
 
 
 def _make_divisible(v, divisor, min_value=None):
@@ -34,7 +35,7 @@ class ConvBNReLU(nn.Sequential):
 
 
 class InvertedResidual(nn.Module):
-    def __init__(self, inp, oup, stride, expand_ratio, norm_layer=None):
+    def __init__(self, inp, oup, stride, expand_ratio, norm_layer=None, sparse=False):
         super(InvertedResidual, self).__init__()
         self.stride = stride
         assert stride in [1, 2]
@@ -65,6 +66,61 @@ class InvertedResidual(nn.Module):
             return self.conv(x)
 
 
+class InvertedResidualBlock(nn.Module):
+    def __init__(self, inp, oup, stride, expand_ratio, norm_layer=None, sparse=False):
+        super(InvertedResidualBlock, self).__init__()
+        self.stride = stride
+        assert stride in [1, 2]
+        self.sparse = sparse
+        if self.sparse:
+            self.masker = dynconv.MaskUnit(channels=inp, stride=stride, dilate_stride=1)
+
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+
+        hidden_dim = int(round(inp * expand_ratio))
+        self.use_res_connect = self.stride == 1 and inp == oup
+        self.squeeze = False
+        self.activation = nn.ReLU(inplace=True)
+
+        if expand_ratio != 1:
+            self.squeeze = True
+            self.conv_pw_1 = nn.Conv2d(inp, hidden_dim, kernel_size=1, stride=1, padding=0, bias=False)
+            self.bn1 = norm_layer(hidden_dim)
+
+        self.conv3x3_dw = nn.Conv2d(hidden_dim, hidden_dim, kernel_size=3, stride=stride, padding=1, groups=hidden_dim, bias=False)
+        self.bn_dw = norm_layer(hidden_dim)
+
+        self.conv_pw_2 = nn.Conv2d(hidden_dim, oup, kernel_size=1, stride=1, padding=0, bias=False)
+        self.bn2 = norm_layer(oup)
+
+    def forward_basic(self, x, meta=None):
+        if not self.sparse:
+            if self.squeeze:
+                x = self.activation(self.bn1(self.conv_pw_1(x)))
+            x = self.activation(self.bn_dw(self.conv3x3_dw(x)))
+            x = self.bn2(self.conv_pw_2(x))
+        else:
+            m = self.masker(x, meta)
+            mask_dilate, mask = m['dilate'], m['std']
+
+            if self.squeeze:
+                x = dynconv.conv1x1(self.conv_pw_1, x, mask, mask_dilate)
+                x = dynconv.bn_relu(self.bn1, self.activation, x, mask_dilate)
+            x = dynconv.conv3x3_dw(self.conv3x3_dw, x, mask_dilate, mask)
+            x = dynconv.bn_relu(self.bn_dw, self.activation, x, mask)
+            x = dynconv.conv1x1(self.conv_pw_2, x, mask_dilate, mask)
+            x = dynconv.bn_relu(self.bn_dw, None, x, mask)
+        return x
+
+    def forward(self, x, meta=None):
+        out = self.forward_basic(x)
+        if self.use_res_connect:
+            return x + out
+        else:
+            return out
+
+
 class MobileNetV2_32x32(nn.Module):
     def __init__(self,
                  num_classes=10,
@@ -90,7 +146,7 @@ class MobileNetV2_32x32(nn.Module):
         super(MobileNetV2_32x32, self).__init__()
 
         if block is None:
-            block = InvertedResidual
+            block = InvertedResidualBlock
 
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
@@ -116,7 +172,9 @@ class MobileNetV2_32x32(nn.Module):
         # building first layer
         input_channel = _make_divisible(input_channel * width_mult, round_nearest)
         self.last_channel = _make_divisible(last_channel * max(1.0, width_mult), round_nearest)
-        features = [ConvBNReLU(3, input_channel, stride=2, norm_layer=norm_layer)]
+        self.first_conv = nn.Sequential(*[ConvBNReLU(3, input_channel, stride=2, norm_layer=norm_layer)])
+
+        features = []
         # building inverted residual blocks
         for t, c, n, s in inverted_residual_setting:
             output_channel = _make_divisible(c * width_mult, round_nearest)
@@ -149,6 +207,7 @@ class MobileNetV2_32x32(nn.Module):
                 nn.init.zeros_(m.bias)
 
     def forward(self, x, meta):
+        x = self.first_conv(x)
         x = self.features(x)
         # Cannot use "squeeze" as batch-size can be 1 => must use reshape with x.shape[0]
         x = nn.functional.adaptive_avg_pool2d(x, 1).reshape(x.shape[0], -1)

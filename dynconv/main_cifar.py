@@ -41,7 +41,7 @@ def main():
                     help='path to latest checkpoint (default: none)')
     parser.add_argument('-e', '--evaluate', action='store_true', help='evaluation mode')
     parser.add_argument('--plot_ponder', action='store_true', help='plot ponder cost')
-    parser.add_argument('--workers', default=8, type=int, help='number of dataloader workers')
+    parser.add_argument('--workers', default=0, type=int, help='number of dataloader workers')
     parser.add_argument('--pretrained', action='store_true', help='initialize with pretrained model')
     args =  parser.parse_args()
     print('Args:', args)
@@ -76,10 +76,13 @@ def main():
 
     ## CRITERION
     class Loss(nn.Module):
-        def __init__(self):
+        def __init__(self, budget=1):
             super(Loss, self).__init__()
             self.task_loss = nn.CrossEntropyLoss().to(device=device)
-            self.sparsity_loss = dynconv.SparsityCriterion(args.budget, args.epochs) if args.budget >= 0 else None
+            if budget == 1 or budget == -1:
+                self.sparsity_loss = None
+            else:
+                self.sparsity_loss = dynconv.SparsityCriterion(args.budget, args.epochs) if args.budget >= 0 else None
 
         def forward(self, output, target, meta):
             l = self.task_loss(output, target) 
@@ -88,7 +91,7 @@ def main():
                 l += 10*self.sparsity_loss(meta)
             return l
     
-    criterion = Loss()
+    criterion = Loss(args.budget)
 
     ## OPTIMIZER
     optimizer = torch.optim.SGD(model.parameters(), args.lr,
