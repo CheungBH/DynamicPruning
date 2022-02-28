@@ -111,7 +111,8 @@ class InvertedResidualBlock(nn.Module):
             x = dynconv.conv3x3_dw(self.conv3x3_dw, x, mask_dilate, mask)
             x = dynconv.bn_relu(self.bn_dw, self.activation, x, mask)
             x = dynconv.conv1x1(self.conv_pw_2, x, mask_dilate, mask)
-            x = dynconv.bn_relu(self.bn_dw, None, x, mask)
+            x = dynconv.bn_relu(self.bn2, None, x, mask)
+            x = dynconv.apply_mask(x, mask)
         return (x, meta)
 
     def forward(self, inp):
@@ -182,7 +183,8 @@ class MobileNetV2_32x32(nn.Module):
             output_channel = _make_divisible(c * width_mult, round_nearest)
             for i in range(n):
                 stride = s if i == 0 else 1
-                features.append(block(input_channel, output_channel, stride, expand_ratio=t, norm_layer=norm_layer))
+                features.append(block(input_channel, output_channel, stride, expand_ratio=t, norm_layer=norm_layer,
+                                      sparse=sparse))
                 input_channel = output_channel
         # building last several layers
         # features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer))
