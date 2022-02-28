@@ -62,6 +62,9 @@ def main():
         transforms.ToTensor(),
         normalize,
     ])
+    ## MODEL
+    net_module = models.__dict__[args.model]
+    model = net_module(sparse=args.budget >= 0).to(device=device)
 
     ## DATA
     trainset = dataloader.imagenet.IN1K(root=args.dataset_root, split='train', transform=transform_train)
@@ -71,9 +74,6 @@ def main():
     val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=False, num_workers=4, pin_memory=False)
 
 
-    ## MODEL
-    net_module = _make_layer.__dict__[args.model]
-    model = net_module(sparse=args.budget >= 0).to(device=device)
 
     file_path = os.path.join(args.save_dir, "log.txt")
 
