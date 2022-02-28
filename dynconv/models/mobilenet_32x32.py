@@ -94,7 +94,8 @@ class InvertedResidualBlock(nn.Module):
         self.conv_pw_2 = nn.Conv2d(hidden_dim, oup, kernel_size=1, stride=1, padding=0, bias=False)
         self.bn2 = norm_layer(oup)
 
-    def forward_basic(self, x, meta=None):
+    def forward_basic(self, inp):
+        x, meta = inp
         if not self.sparse:
             if self.squeeze:
                 x = self.activation(self.bn1(self.conv_pw_1(x)))
@@ -111,12 +112,13 @@ class InvertedResidualBlock(nn.Module):
             x = dynconv.bn_relu(self.bn_dw, self.activation, x, mask)
             x = dynconv.conv1x1(self.conv_pw_2, x, mask_dilate, mask)
             x = dynconv.bn_relu(self.bn_dw, None, x, mask)
-        return x
+        return (x, meta)
 
-    def forward(self, x, meta=None):
-        out = self.forward_basic(x)
+    def forward(self, inp):
+        x, meta = inp
+        out = self.forward_basic(inp)
         if self.use_res_connect:
-            return x + out
+            return (x + out[0], out[1])
         else:
             return out
 
@@ -183,7 +185,8 @@ class MobileNetV2_32x32(nn.Module):
                 features.append(block(input_channel, output_channel, stride, expand_ratio=t, norm_layer=norm_layer))
                 input_channel = output_channel
         # building last several layers
-        features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer))
+        # features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer))
+        self.final_conv = nn.Sequential(*[ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer)])
         # make it nn.Sequential
         self.features = nn.Sequential(*features)
 
@@ -208,7 +211,8 @@ class MobileNetV2_32x32(nn.Module):
 
     def forward(self, x, meta):
         x = self.first_conv(x)
-        x = self.features(x)
+        x, meta = self.features((x, meta))
+        x = self.final_conv(x)
         # Cannot use "squeeze" as batch-size can be 1 => must use reshape with x.shape[0]
         x = nn.functional.adaptive_avg_pool2d(x, 1).reshape(x.shape[0], -1)
         x = self.classifier(x)
