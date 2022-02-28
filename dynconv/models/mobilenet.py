@@ -1,5 +1,5 @@
 from torch import nn
-
+from .mobilenet_32x32 import InvertedResidualBlock
 
 
 def _make_divisible(v, divisor, min_value=None):
@@ -91,7 +91,7 @@ class MobileNetV2(nn.Module):
         super(MobileNetV2, self).__init__()
 
         if block is None:
-            block = InvertedResidual
+            block = InvertedResidualBlock
 
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
@@ -119,16 +119,20 @@ class MobileNetV2(nn.Module):
         # building first layer
         input_channel = _make_divisible(input_channel * width_mult, round_nearest)
         self.last_channel = _make_divisible(last_channel * max(1.0, width_mult), round_nearest)
-        features = [ConvBNReLU(3, input_channel, stride=2, norm_layer=norm_layer)]
+        self.first_conv = nn.Sequential(*[ConvBNReLU(3, input_channel, stride=2, norm_layer=norm_layer)])
+
+        features = []
         # building inverted residual blocks
         for t, c, n, s in inverted_residual_setting:
             output_channel = _make_divisible(c * width_mult, round_nearest)
             for i in range(n):
                 stride = s if i == 0 else 1
-                features.append(block(input_channel, output_channel, stride, expand_ratio=t, norm_layer=norm_layer))
+                features.append(block(input_channel, output_channel, stride, expand_ratio=t, norm_layer=norm_layer,
+                                      sparse=sparse))
                 input_channel = output_channel
         # building last several layers
-        features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer))
+        # features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer))
+        self.final_conv = nn.Sequential(*[ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer)])
         # make it nn.Sequential
         self.features = nn.Sequential(*features)
 
@@ -152,9 +156,9 @@ class MobileNetV2(nn.Module):
                 nn.init.zeros_(m.bias)
 
     def forward(self, x, meta):
-        # This exists since TorchScript doesn't support inheritance, so the superclass method
-        # (this one) needs to have a name other than `forward` that can be accessed in a subclass
-        x = self.features(x)
+        x = self.first_conv(x)
+        x, meta = self.features((x, meta))
+        x = self.final_conv(x)
         # Cannot use "squeeze" as batch-size can be 1 => must use reshape with x.shape[0]
         x = nn.functional.adaptive_avg_pool2d(x, 1).reshape(x.shape[0], -1)
         x = self.classifier(x)
