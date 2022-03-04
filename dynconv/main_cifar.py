@@ -31,12 +31,11 @@ def main():
     parser.add_argument('--batchsize', default=256, type=int, help='batch size')
     parser.add_argument('--epochs', default=350, type=int, help='number of epochs')
     parser.add_argument('--model', type=str, default='resnet32', help='network model name')
-    parser.add_argument('--load', action='store_true', help='initialize with pretrained model')
+    parser.add_argument('--load', type=str, default='', help='load model path')
 
     # parser.add_argument('--resnet_n', default=5, type=int, help='number of layers per resnet stage (5 for Resnet-32)')
     parser.add_argument('--budget', default=-1, type=float, help='computational budget (between 0 and 1) (-1 for no sparsity)')
     parser.add_argument('-s', '--save_dir', type=str, default='', help='directory to save model')
-    parser.add_argument('-p', '--pretrain', type=str, default='', help='load pretrain model')
     parser.add_argument('-r', '--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
     parser.add_argument('-e', '--evaluate', action='store_true', help='evaluation mode')
