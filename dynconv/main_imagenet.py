@@ -31,7 +31,7 @@ def main():
     parser.add_argument('--batchsize', default=64, type=int, help='batch size')
     parser.add_argument('--epochs', default=100, type=int, help='number of epochs')
     parser.add_argument('--model', type=str, default='resnet101', help='network model name')
-
+    parser.add_argument('--load', type=str, default='', help='load model path')
     
     parser.add_argument('--budget', default=-1, type=float, help='computational budget (between 0 and 1) (-1 for no sparsity)')
     parser.add_argument('-s', '--save_dir', type=str, default='', help='directory to save model')
@@ -122,7 +122,9 @@ def main():
                 raise ValueError(msg)
             else:
                 print(msg)
-
+    elif args.load:
+        checkpoint = torch.load(args.load, map_location=device)
+        model.load_state_dict(checkpoint['state_dict'])
 
     try:
         lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,

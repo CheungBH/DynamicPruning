@@ -31,7 +31,7 @@ def main():
     parser.add_argument('--batchsize', default=256, type=int, help='batch size')
     parser.add_argument('--epochs', default=350, type=int, help='number of epochs')
     parser.add_argument('--model', type=str, default='resnet32', help='network model name')
-
+    parser.add_argument('--load', action='store_true', help='initialize with pretrained model')
 
     # parser.add_argument('--resnet_n', default=5, type=int, help='number of layers per resnet stage (5 for Resnet-32)')
     parser.add_argument('--budget', default=-1, type=float, help='computational budget (between 0 and 1) (-1 for no sparsity)')
@@ -42,7 +42,6 @@ def main():
     parser.add_argument('-e', '--evaluate', action='store_true', help='evaluation mode')
     parser.add_argument('--plot_ponder', action='store_true', help='plot ponder cost')
     parser.add_argument('--workers', default=0, type=int, help='number of dataloader workers')
-    parser.add_argument('--pretrained', action='store_true', help='initialize with pretrained model')
     args =  parser.parse_args()
     print('Args:', args)
 
@@ -124,8 +123,8 @@ def main():
                 raise ValueError(msg)
             else:
                 print(msg)
-    elif args.pretrain:
-        checkpoint = torch.load(args.pretrain, map_location=device)
+    elif args.load:
+        checkpoint = torch.load(args.load, map_location=device)
         model.load_state_dict(checkpoint['state_dict'])
 
     try:
