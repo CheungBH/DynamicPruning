@@ -32,7 +32,7 @@ def main():
     parser.add_argument('--batchsize', default=64, type=int, help='batch size')
     parser.add_argument('--epochs', default=100, type=int, help='number of epochs')
     parser.add_argument('--model', type=str, default='resnet101', help='network model name')
-    parser.add_argument('--model_cfg', type=str, default='', help='network model name')
+    parser.add_argument('--model_cfg', type=str, default='baseline', help='network model name')
     parser.add_argument('--load', type=str, default='', help='load model path')
     
     parser.add_argument('--budget', default=-1, type=float, help='computational budget (between 0 and 1) (-1 for no sparsity)')
