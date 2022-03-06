@@ -71,7 +71,7 @@ class MobileNetV2(nn.Module):
                  num_classes=1000,
                  width_mult=1.0,
                  sparse=False,
-                 inverted_residual_setting=None,
+                 model_cfg="",
                  round_nearest=8,
                  block=None,
                  norm_layer=None):
@@ -97,9 +97,8 @@ class MobileNetV2(nn.Module):
             norm_layer = nn.BatchNorm2d
 
         input_channel = 32
-        last_channel = 500
 
-        if inverted_residual_setting is None:
+        if model_cfg == "max500":
             inverted_residual_setting = [
                 # t, c, n, s
                 [1, 16, 1, 1],
@@ -110,6 +109,21 @@ class MobileNetV2(nn.Module):
                 [6, 72, 3, 2],
                 [6, 80, 1, 1],
             ]
+            last_channel = 500
+        elif model_cfg == "baseline":
+            inverted_residual_setting = [
+                # t, c, n, s
+                [1, 16, 1, 1],
+                [6, 24, 2, 2],
+                [6, 32, 3, 2],
+                [6, 64, 4, 2],
+                [6, 96, 3, 1],
+                [6, 160, 3, 2],
+                [6, 320, 1, 1],
+            ]
+            last_channel = 1280
+        else:
+            raise NotImplementedError
 
         # only check the first element, assuming user knows t,c,n,s are required
         if len(inverted_residual_setting) == 0 or len(inverted_residual_setting[0]) != 4:
