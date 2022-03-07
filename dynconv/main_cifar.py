@@ -168,7 +168,7 @@ def main():
             'best_prec1': best_prec1,
         }, folder=args.save_dir, is_best=is_best)
         with open(file_path, "a+") as f:
-            print(f" *Currently Best prec1: {best_prec1}", file=f)
+            print(f" *Currently Best prec1: {best_prec1}\n-------------------------------------------------\n", file=f)
 
     with open(file_path, "a+") as f:
         print(f" * Best prec1: {best_prec1}, Epoch {best_epoch}, MMac {best_MMac}", file=f)
