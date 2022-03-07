@@ -37,7 +37,7 @@ class SparsityCriterion(nn.Module):
                 m.total_positions * m.flops_per_position
 
             layer_perc = c / t
-            logger.add('layer_perc_'+str(i), layer_perc.item())
+            # logger.add('layer_perc_'+str(i), layer_perc.item())
             assert layer_perc >= 0 and layer_perc <= 1, layer_perc
             loss_block += max(0, layer_perc - upper_bound)**2  # upper bound
             loss_block += max(0, lower_bound - layer_perc)**2  # lower bound
@@ -51,8 +51,8 @@ class SparsityCriterion(nn.Module):
         loss_network = (perc - self.sparsity_target)**2
 
         logger.add('upper_bound', upper_bound)
-        logger.add('lower_bound', lower_bound)
-        logger.add('cost_perc', perc.item())
-        logger.add('loss_sp_block', loss_block.item())
-        logger.add('loss_sp_network', loss_network.item())
+        # logger.add('lower_bound', lower_bound)
+        # logger.add('cost_perc', perc.item())
+        # logger.add('loss_sp_block', loss_block.item())
+        # logger.add('loss_sp_network', loss_network.item())
         return loss_network + loss_block
