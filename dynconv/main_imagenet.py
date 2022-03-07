@@ -81,10 +81,13 @@ def main():
 
     ## CRITERION
     class Loss(nn.Module):
-        def __init__(self):
+        def __init__(self, budget=1):
             super(Loss, self).__init__()
             self.task_loss = nn.CrossEntropyLoss().to(device=device)
-            self.sparsity_loss = dynconv.SparsityCriterion(args.budget, args.epochs) if args.budget >= 0 else None
+            if budget == 1 or budget == -1:
+                self.sparsity_loss = None
+            else:
+                self.sparsity_loss = dynconv.SparsityCriterion(args.budget, args.epochs) if args.budget >= 0 else None
 
         def forward(self, output, target, meta):
             task_loss, sparse_loss = self.task_loss(output, target), torch.zeros(1).cuda()
@@ -93,7 +96,7 @@ def main():
                 sparse_loss = 10*self.sparsity_loss(meta)
             return task_loss, sparse_loss
     
-    criterion = Loss()
+    criterion = Loss(args.budget)
 
     ## OPTIMIZER
     optimizer = torch.optim.SGD(model.parameters(), args.lr,
