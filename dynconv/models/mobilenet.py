@@ -98,7 +98,7 @@ class MobileNetV2(nn.Module):
 
         input_channel = 32
 
-        if model_cfg == "max500":
+        if model_cfg == "max512":
             inverted_residual_setting = [
                 # t, c, n, s
                 [1, 16, 1, 1],
@@ -109,7 +109,7 @@ class MobileNetV2(nn.Module):
                 [6, 72, 3, 2],
                 [6, 80, 1, 1],
             ]
-            last_channel = 500
+            last_channel = 512
         elif model_cfg == "baseline":
             inverted_residual_setting = [
                 # t, c, n, s
