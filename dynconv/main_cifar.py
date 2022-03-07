@@ -83,11 +83,11 @@ def main():
                 self.sparsity_loss = dynconv.SparsityCriterion(args.budget, args.epochs) if args.budget >= 0 else None
 
         def forward(self, output, target, meta):
-            l = self.task_loss(output, target) 
-            logger.add('loss_task', l.item())
+            task_loss, sparse_loss = self.task_loss(output, target), torch.zeros(1).cuda()
+            logger.add('loss_task', task_loss.item())
             if self.sparsity_loss is not None:
-                l += 10*self.sparsity_loss(meta)
-            return l
+                sparse_loss = 10*self.sparsity_loss(meta)
+            return task_loss, sparse_loss
     
     criterion = Loss(args.budget)
 
@@ -144,6 +144,7 @@ def main():
         return
         
     ## TRAINING
+    best_epoch, best_MMac = start_epoch, -1
     for epoch in range(start_epoch, args.epochs):
         print(f"########## Epoch {epoch} ##########")
 
@@ -153,10 +154,12 @@ def main():
         lr_scheduler.step()
 
         # evaluate on validation set
-        prec1 = validate(args, val_loader, model, criterion, epoch, file_path)
+        prec1, MMac = validate(args, val_loader, model, criterion, epoch, file_path)
 
         # remember best prec@1 and save checkpoint
         is_best = prec1 > best_prec1
+        if is_best:
+            best_epoch, best_MMac = epoch, MMac
         best_prec1 = max(prec1, best_prec1)
         utils.save_checkpoint({
             'state_dict': model.state_dict(),
@@ -164,8 +167,12 @@ def main():
             'epoch': epoch + 1,
             'best_prec1': best_prec1,
         }, folder=args.save_dir, is_best=is_best)
+        with open(file_path, "a+") as f:
+            print(f" *Currently Best prec1: {best_prec1}", file=f)
 
-        print(f" * Best prec1: {best_prec1}")
+    with open(file_path, "a+") as f:
+        print(f" * Best prec1: {best_prec1}, Epoch {best_epoch}, MMac {best_MMac}", file=f)
+
 
 def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     """
@@ -173,6 +180,8 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     """
     model.train()
     top1 = utils.AverageMeter()
+    task_loss_record = utils.AverageMeter()
+    sparse_loss_record = utils.AverageMeter()
 
     # set gumbel temp
     # disable gumbel noise in finetuning stage
@@ -188,26 +197,31 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
         # compute output
         meta = {'masks': [], 'device': device, 'gumbel_temp': gumbel_temp, 'gumbel_noise': gumbel_noise, 'epoch': epoch}
         output, meta = model(input, meta)
-        loss = criterion(output, target, meta)
+        t_loss, s_loss = criterion(output, target, meta)
         prec1 = utils.accuracy(output.data, target)[0]
         top1.update(prec1.item(), input.size(0))
-
+        task_loss_record.update(t_loss.item(), input.size(0))
+        sparse_loss_record.update(s_loss.item(), input.size(0))
         # compute gradient and do SGD step
+
         optimizer.zero_grad()
+        loss = s_loss + t_loss if s_loss else t_loss
         loss.backward()
         optimizer.step()
 
     if file_path:
         with open(file_path, "a+") as f:
             logger.tick(f)
-            f.write("Train: Epoch {}, Prec@1 {}".format(file_path, round(top1.avg, 4)))
-        
+            f.write("Train: Epoch {}, Prec@1 {}, task loss {}, sparse loss {}\n".format
+                    (epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(sparse_loss_record.avg, 4)))
 
 def validate(args, val_loader, model, criterion, epoch, file_path=None):
     """
     Run evaluation
     """
     top1 = utils.AverageMeter()
+    task_loss_record = utils.AverageMeter()
+    sparse_loss_record = utils.AverageMeter()
 
     # switch to evaluate mode
     model = flopscounter.add_flops_counting_methods(model)
@@ -224,6 +238,9 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
             meta = {'masks': [], 'device': device, 'gumbel_temp': 1.0, 'gumbel_noise': False, 'epoch': epoch}
             output, meta = model(input, meta)
             output = output.float()
+            t_loss, s_loss = criterion(output, target, meta)
+            task_loss_record.update(t_loss.item(), input.size(0))
+            sparse_loss_record.update(s_loss.item(), input.size(0))
 
             # measure accuracy and record loss
             prec1 = utils.accuracy(output.data, target)[0]
@@ -240,9 +257,11 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
     model.stop_flops_count()
     if file_path:
         with open(file_path, "a+") as f:
-            f.write("Validation: Epoch {}, Prec@1 {}, ave FLOPS per image: {} MMac".
-                    format(file_path, round(top1.avg, 4), round(model.compute_average_flops_cost()[0]/1e6), 6))
-    return top1.avg
+            f.write("Validation: Epoch {}, Prec@1 {}, task loss {}, sparse loss {}, ave FLOPS per image: {} MMac\n".
+                    format(epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(sparse_loss_record.avg, 4),
+                           round(model.compute_average_flops_cost()[0] / 1e6), 6))
+
+    return top1.avg, model.compute_average_flops_cost()[0] / 1e6
 
 
 if __name__ == "__main__":
