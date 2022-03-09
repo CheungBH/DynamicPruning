@@ -201,7 +201,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     task_loss_record = utils.AverageMeter()
     sparse_loss_record = utils.AverageMeter()
 
-    if args.lr_decay > 1:
+    if args.lr_decay[0] > 1:
         if epoch < args.lr_decay[0]:
             gumbel_temp = 5.0
         elif epoch < args.lr_decay[1]:
