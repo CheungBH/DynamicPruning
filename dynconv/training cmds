@@ -1,0 +1,30 @@
+mobilenet reproduction
+python main_imagenet.py -s exp/imagenet_mobile/reproduce -budget -1 --optim rmsprop --scheduler exp --batchsize 96 --model MobileNetV2 --lr_decay 0.98 --lr 0.045 --weight_decay 4e-5 --dataset-root
+
+mobilenet reproduction max512
+python main_imagenet.py -s exp/imagenet_mobile/reproduce_max512 -budget -1 --optim rmsprop --scheduler exp --batchsize 96 --model MobileNetV2 --lr_decay 0.98 --lr 0.045 --weight_decay 4e-5 --model_cfg max512 --dataset-root
+
+mobilenet reproduction sparse100
+python main_imagenet.py -s exp/imagenet_mobile/reproduce_s100 -budget 1 --optim rmsprop --scheduler exp --batchsize 96 --model MobileNetV2 --lr_decay 0.98 --lr 0.045 --weight_decay 4e-5 --dataset-root
+
+mobilenet reproduction sparse100 max512
+python main_imagenet.py -s exp/imagenet_mobile/reproduce_s100_max512 -budget 1 --optim rmsprop --scheduler exp --batchsize 96 --model MobileNetV2 --lr_decay 0.98 --lr 0.045 --weight_decay 4e-5 --dataset-root
+
+mobilenet reproduction sparse50
+python main_imagenet.py -s exp/imagenet_mobile/reproduce_s50 -budget 0.5 --optim rmsprop --scheduler exp --batchsize 96 --model MobileNetV2 --lr_decay 0.98 --lr 0.045 --weight_decay 4e-5 --load exp/imagenet_mobile/reproduce_s100/checkpoint.pth --dataset-root
+
+mobilenet reproduction sparse50 max512
+python main_imagenet.py -s exp/imagenet_mobile/reproduce_s50_max512 -budget 0.5 --optim rmsprop --scheduler exp --batchsize 96 --model MobileNetV2 --lr_decay 0.98 --lr 0.045 --weight_decay 4e-5 --load exp/imagenet_mobile/reproduce_s100_max512/checkpoint.pth --dataset-root
+
+mobilenet reproduction sparse40
+python main_imagenet.py -s exp/imagenet_mobile/reproduce_s40 -budget 0.4 --optim rmsprop --scheduler exp --batchsize 96 --model MobileNetV2 --lr_decay 0.98 --lr 0.045 --weight_decay 4e-5 --load exp/imagenet_mobile/reproduce_s100/checkpoint.pth --dataset-root
+
+mobilenet reproduction sparse40 max512
+python main_imagenet.py -s exp/imagenet_mobile/reproduce_s40_max512 -budget 0.4 --optim rmsprop --scheduler exp --batchsize 96 --model MobileNetV2 --lr_decay 0.98 --lr 0.045 --weight_decay 4e-5 --load exp/imagenet_mobile/reproduce_s100_max512/checkpoint.pth --dataset-root
+
+mobilenet reproduction sparse60
+python main_imagenet.py -s exp/imagenet_mobile/reproduce_s60 -budget 0.6 --optim rmsprop --scheduler exp --batchsize 96 --model MobileNetV2 --lr_decay 0.98 --lr 0.045 --weight_decay 4e-5 --load exp/imagenet_mobile/reproduce_s100/checkpoint.pth --dataset-root
+
+mobilenet reproduction sparse60 max512
+python main_imagenet.py -s exp/imagenet_mobile/reproduce_s60_max512 -budget 0.6 --optim rmsprop --scheduler exp --batchsize 96 --model MobileNetV2 --lr_decay 0.98 --lr 0.045 --weight_decay 4e-5 --load exp/imagenet_mobile/reproduce_s100_max512/checkpoint.pth --dataset-root
+
