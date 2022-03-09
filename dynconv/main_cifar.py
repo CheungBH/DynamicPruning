@@ -77,10 +77,7 @@ def main():
         def __init__(self, budget=1):
             super(Loss, self).__init__()
             self.task_loss = nn.CrossEntropyLoss().to(device=device)
-            if budget == 1 or budget == -1:
-                self.sparsity_loss = None
-            else:
-                self.sparsity_loss = dynconv.SparsityCriterion(args.budget, args.epochs) if args.budget >= 0 else None
+            self.sparsity_loss = dynconv.SparsityCriterion(args.budget, args.epochs) if args.budget >= 0 else None
 
         def forward(self, output, target, meta):
             task_loss, sparse_loss = self.task_loss(output, target), torch.zeros(1).cuda()
