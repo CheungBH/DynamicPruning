@@ -43,6 +43,8 @@ def main():
                     help='ImageNet dataset root')
     parser.add_argument('-e', '--evaluate', action='store_true', help='evaluation mode')
     parser.add_argument('--plot_ponder', action='store_true', help='plot ponder cost')
+    parser.add_argument('--optim', type=str, default='sgd', help='network model name')
+    parser.add_argument('--scheduler', type=str, default='step', help='network model name')
     parser.add_argument('--workers', default=8, type=int, help='number of dataloader workers')
     args =  parser.parse_args()
     print('Args:', args)
@@ -99,9 +101,16 @@ def main():
     criterion = Loss(args.budget)
 
     ## OPTIMIZER
-    optimizer = torch.optim.SGD(model.parameters(), args.lr,
-                            momentum=args.momentum,
-                            weight_decay=args.weight_decay)
+    if args.optim == "sgd":
+        optimizer = torch.optim.SGD(model.parameters(), args.lr,
+                                momentum=args.momentum,
+                                weight_decay=args.weight_decay)
+    elif args.optim == "rmsprop":
+        optimizer = torch.optim.RMSprop(model.parameters(), args.lr,
+                                momentum=args.momentum,
+                                weight_decay=args.weight_decay)
+    else:
+        raise NotImplementedError
 
     ## CHECKPOINT
     start_epoch = -1
@@ -131,11 +140,15 @@ def main():
         checkpoint = torch.load(args.load, map_location=device)
         model.load_state_dict(checkpoint['state_dict'])
 
-    try:
-        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
-            milestones=args.lr_decay, last_epoch=start_epoch)
-    except:
-        print('Warning: Could not reload learning rate scheduler')
+    if args.scheduler == "step":
+        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
+            optimizer, milestones=args.lr_decay, last_epoch=start_epoch)
+    elif args.scheduler == "exp":
+        lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer, gamma=args.lr_decay[0], last_epoch=start_epoch)
+    else:
+        raise NotImplementedError
+
     start_epoch += 1
             
     ## Count number of params
