@@ -230,11 +230,11 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
         loss.backward()
         optimizer.step()
 
-        if file_path:
-            with open(file_path, "a+") as f:
-                logger.tick(f)
-                f.write("Train: Epoch {}, Prec@1 {}, task loss {}, sparse loss {}\n".format
-                        (epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(sparse_loss_record.avg, 4)))
+    if file_path:
+        with open(file_path, "a+") as f:
+            logger.tick(f)
+            f.write("Train: Epoch {}, Prec@1 {}, task loss {}, sparse loss {}\n".format
+                    (epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(sparse_loss_record.avg, 4)))
 
 
 def validate(args, val_loader, model, criterion, epoch, file_path=None):
