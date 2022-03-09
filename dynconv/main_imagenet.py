@@ -25,7 +25,7 @@ device='cuda'
 def main():
     parser = argparse.ArgumentParser(description='PyTorch ImageNet Training with sparse masks')
     parser.add_argument('--lr', default=0.025, type=float, help='learning rate')
-    parser.add_argument('--lr_decay', default=[30,60,90], nargs='+', type=int, help='learning rate decay epochs')
+    parser.add_argument('--lr_decay', default=[30,60,90], nargs='+', help='learning rate decay epochs')
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
     parser.add_argument('--weight_decay', default=1e-4, type=float, help='weight decay')
     parser.add_argument('--sparse_weight', default=10, type=float, help='weight decay')
@@ -201,12 +201,20 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     task_loss_record = utils.AverageMeter()
     sparse_loss_record = utils.AverageMeter()
 
-    if epoch < args.lr_decay[0]:
-        gumbel_temp = 5.0
-    elif epoch < args.lr_decay[1]:
-        gumbel_temp = 2.5
+    if args.lr_decay > 1:
+        if epoch < args.lr_decay[0]:
+            gumbel_temp = 5.0
+        elif epoch < args.lr_decay[1]:
+            gumbel_temp = 2.5
+        else:
+            gumbel_temp = 1
     else:
-        gumbel_temp = 1
+        if epoch < 0.5*args.epochs:
+            gumbel_temp = 5.0
+        elif epoch < 0.8*args.epochs:
+            gumbel_temp = 2.5
+        else:
+            gumbel_temp = 1
     gumbel_noise = False if epoch > 0.8*args.epochs else True
 
     num_step =  len(train_loader)
