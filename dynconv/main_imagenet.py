@@ -145,7 +145,7 @@ def main():
             optimizer, milestones=args.lr_decay, last_epoch=start_epoch)
     elif args.scheduler == "exp":
         lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
-            optimizer, gamma=args.lr_decay[0], last_epoch=start_epoch)
+            optimizer, gamma=float(args.lr_decay[0]), last_epoch=start_epoch)
     else:
         raise NotImplementedError
 
