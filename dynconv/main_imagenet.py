@@ -43,6 +43,7 @@ def main():
                     help='ImageNet dataset root')
     parser.add_argument('-e', '--evaluate', action='store_true', help='evaluation mode')
     parser.add_argument('--plot_ponder', action='store_true', help='plot ponder cost')
+    parser.add_argument('--auto_resume', action='store_true', help='plot ponder cost')
     parser.add_argument('--optim', type=str, default='sgd', help='network model name')
     parser.add_argument('--scheduler', type=str, default='step', help='network model name')
     parser.add_argument('--workers', default=8, type=int, help='number of dataloader workers')
@@ -139,6 +140,24 @@ def main():
         update_dict = {k: v for k, v in model_dict.items() if k in checkpoint_dict.keys()}
         model_dict.update(update_dict)
         model.load_state_dict(model_dict)
+    elif args.auto_resume:
+        assert args.save_dir, "Please specify the auto resuming folder"
+        resume_path = os.path.join(args.save_dir, "checkpoint.pth")
+        if os.path.isfile(resume_path):
+            print(f"=> loading checkpoint '{resume_path}'")
+            checkpoint = torch.load(args.resume)
+            # print('check', checkpoint)
+            start_epoch = checkpoint['epoch']-1
+            best_prec1 = checkpoint['best_prec1']
+            model.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            print(f"=> loaded checkpoint '{resume_path}'' (epoch {checkpoint['epoch']}, best prec1 {checkpoint['best_prec1']})")
+        else:
+            msg = "=> no checkpoint found at '{}'".format(resume_path)
+            if args.evaluate:
+                raise ValueError(msg)
+            else:
+                print(msg)
 
     if args.scheduler == "step":
         lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
