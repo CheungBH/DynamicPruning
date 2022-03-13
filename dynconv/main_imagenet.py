@@ -92,7 +92,7 @@ def main():
             task_loss, sparse_loss = self.task_loss(output, target), torch.zeros(1).cuda()
             logger.add('loss_task', task_loss.item())
             if self.sparsity_loss is not None:
-                sparse_loss = 10*self.sparsity_loss(meta)
+                sparse_loss = args.sparse_weight*self.sparsity_loss(meta)
             return task_loss, sparse_loss
     
     criterion = Loss(args.budget)
