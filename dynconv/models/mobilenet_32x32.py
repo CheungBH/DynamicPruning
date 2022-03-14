@@ -72,14 +72,15 @@ class InvertedResidualBlock(nn.Module):
         self.stride = stride
         assert stride in [1, 2]
         self.sparse = sparse
-        if self.sparse:
+        self.use_res_connect = self.stride == 1 and inp == oup
+        if self.sparse and self.use_res_connect:
             self.masker = dynconv.MaskUnit(channels=inp, stride=stride, dilate_stride=1)
 
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
 
         hidden_dim = int(round(inp * expand_ratio))
-        self.use_res_connect = self.stride == 1 and inp == oup
+
         self.squeeze = False
         self.activation = nn.ReLU(inplace=True)
 
@@ -96,7 +97,7 @@ class InvertedResidualBlock(nn.Module):
 
     def forward_basic(self, inp):
         x, meta = inp
-        if not self.sparse:
+        if (not self.sparse) or (not self.use_res_connect):
             if self.squeeze:
                 x = self.activation(self.bn1(self.conv_pw_1(x)))
             x = self.activation(self.bn_dw(self.conv3x3_dw(x)))
