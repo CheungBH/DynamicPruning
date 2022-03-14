@@ -55,30 +55,30 @@ def main():
 
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                     std=[0.229, 0.224, 0.225])
-    transform_train = transforms.Compose([
-            transforms.RandomResizedCrop(res),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            normalize,
-        ])
+    net_module = models.__dict__[args.model]
+    model = net_module(sparse=args.budget >= 0, model_cfg=args.model_cfg).to(device=device)
+
+    if not args.evaluate:
+        transform_train = transforms.Compose([
+                transforms.RandomResizedCrop(res),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                normalize,
+            ])
+
+        ## DATA
+        trainset = dataloader.imagenet.IN1K(root=args.dataset_root, split='train', transform=transform_train)
+        train_loader = torch.utils.data.DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=args.workers, pin_memory=False)
+
     transform_val = transforms.Compose([
-        transforms.Resize(int(res/0.875)),
+        transforms.Resize(int(res / 0.875)),
         transforms.CenterCrop(res),
         transforms.ToTensor(),
         normalize,
     ])
-    ## MODEL
-    net_module = models.__dict__[args.model]
-    model = net_module(sparse=args.budget >= 0, model_cfg=args.model_cfg).to(device=device)
-
-    ## DATA
-    trainset = dataloader.imagenet.IN1K(root=args.dataset_root, split='train', transform=transform_train)
-    train_loader = torch.utils.data.DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=args.workers, pin_memory=False)
 
     valset = dataloader.imagenet.IN1K(root=args.dataset_root, split='val', transform=transform_val)
     val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=False, num_workers=4, pin_memory=False)
-
-
 
     file_path = os.path.join(args.save_dir, "log.txt")
 
