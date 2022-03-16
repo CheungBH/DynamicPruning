@@ -31,6 +31,7 @@ def main():
     parser.add_argument('--sparse_weight', default=10, type=float, help='weight decay')
     parser.add_argument('--batchsize', default=64, type=int, help='batch size')
     parser.add_argument('--epochs', default=100, type=int, help='number of epochs')
+
     parser.add_argument('--model', type=str, default='resnet101', help='network model name')
     parser.add_argument('--model_cfg', type=str, default='baseline', help='network model name')
     parser.add_argument('--load', type=str, default='', help='load model path')
@@ -42,6 +43,7 @@ def main():
     parser.add_argument('--dataset-root', default='/esat/visicsrodata/datasets/ilsvrc2012/', type=str, metavar='PATH',
                     help='ImageNet dataset root')
     parser.add_argument('-e', '--evaluate', action='store_true', help='evaluation mode')
+    parser.add_argument('--resolution_mask', action='store_true', help='share a mask within a same resolution')
     parser.add_argument('--plot_ponder', action='store_true', help='plot ponder cost')
     parser.add_argument('--auto_resume', action='store_true', help='plot ponder cost')
     parser.add_argument('--optim', type=str, default='sgd', help='network model name')
@@ -50,13 +52,15 @@ def main():
     args =  parser.parse_args()
     print('Args:', args)
 
-
     res = 224
 
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                     std=[0.229, 0.224, 0.225])
     net_module = models.__dict__[args.model]
-    model = net_module(sparse=args.budget >= 0, model_cfg=args.model_cfg).to(device=device)
+    model = net_module(sparse=args.budget >= 0, model_cfg=args.model_cfg, resolution_mask=args.resolution_mask).to(device=device)
+
+    meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0}
+    _ = model(torch.rand((1, 3, res, res)).cuda(), meta)
 
     if not args.evaluate:
         transform_train = transforms.Compose([
@@ -78,7 +82,7 @@ def main():
     ])
 
     valset = dataloader.imagenet.IN1K(root=args.dataset_root, split='val', transform=transform_val)
-    val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=False, num_workers=4, pin_memory=False)
+    val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=False, num_workers=0, pin_memory=False)
 
     file_path = os.path.join(args.save_dir, "log.txt")
 

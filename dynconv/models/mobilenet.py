@@ -72,6 +72,7 @@ class MobileNetV2(nn.Module):
                  width_mult=1.0,
                  sparse=False,
                  model_cfg="",
+                 resolution_mask=False,
                  round_nearest=8,
                  block=None,
                  norm_layer=None):
@@ -134,15 +135,17 @@ class MobileNetV2(nn.Module):
         input_channel = _make_divisible(input_channel * width_mult, round_nearest)
         self.last_channel = _make_divisible(last_channel * max(1.0, width_mult), round_nearest)
         self.first_conv = nn.Sequential(*[ConvBNReLU(3, input_channel, stride=2, norm_layer=norm_layer)])
+        self.resolution_mask = resolution_mask
 
         features = []
         # building inverted residual blocks
-        for t, c, n, s in inverted_residual_setting:
+        for stage_idx, (t, c, n, s) in enumerate(inverted_residual_setting):
             output_channel = _make_divisible(c * width_mult, round_nearest)
             for i in range(n):
                 stride = s if i == 0 else 1
+                mask_block = int((s == 2 and i == 1))
                 features.append(block(input_channel, output_channel, stride, expand_ratio=t, norm_layer=norm_layer,
-                                      sparse=sparse))
+                                      sparse=sparse, resolution_mask=resolution_mask, mask_block=mask_block))
                 input_channel = output_channel
         # building last several layers
         # features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer))
