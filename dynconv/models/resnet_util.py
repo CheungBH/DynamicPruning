@@ -76,7 +76,7 @@ class Bottleneck(nn.Module):
     expansion = 4
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
-                 base_width=64, dilation=1, norm_layer=None, sparse=False):
+                 base_width=64, dilation=1, norm_layer=None, sparse=False, resolution_mask=False, mask_block=False):
         super(Bottleneck, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
@@ -97,8 +97,12 @@ class Bottleneck(nn.Module):
         self.stride = stride
         self.sparse = sparse
         self.fast = True
+        self.resolution_mask = resolution_mask
+        self.mask_block = mask_block
 
         if sparse:
+            if resolution_mask and not self.mask_block:
+                return
             self.masker = dynconv.MaskUnit(channels=inplanes, stride=stride, dilate_stride=stride)
 
     def forward(self, input):
@@ -121,7 +125,13 @@ class Bottleneck(nn.Module):
             out += identity
         else:
             assert meta is not None
-            m = self.masker(x, meta)
+            if self.resolution_mask:
+                if self.mask_block:
+                    m = self.masker(x, meta)
+                else:
+                    m = meta["masks"][-1]
+            else:
+                m = self.masker(x, meta)
             mask_dilate, mask = m['dilate'], m['std']
 
             x = dynconv.conv1x1(self.conv1, x, mask_dilate)
