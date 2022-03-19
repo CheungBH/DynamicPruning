@@ -36,6 +36,34 @@ class Mask():
         return f'Mask with {self.active_positions}/{self.total_positions} positions, and {self.flops_per_position} accumulated FLOPS per position'
 
 
+class StatMaskUnit(nn.Module):
+    def __init__(self, init_thresh=0.5, stride=1, dilate_stride=1, ):
+        super(StatMaskUnit, self).__init__()
+        self.threshold = nn.Parameter(init_thresh * torch.ones(1, 1, 1, 1))
+        self.expandmask = ExpandMask(stride=dilate_stride)
+        self.stride = stride
+
+    def forward(self, x, meta):
+        _, channel_num, orig_h, orig_w = x.shape
+        summed_mask = torch.sum((x == 0).int(), dim=1)
+        target_h, target_w = int(orig_h/self.stride), int(orig_w/self.stride)
+        soft = torch.true_divide(summed_mask, channel_num).unsqueeze(dim=1)
+        soft = nn.functional.upsample_nearest(soft, size=(target_h, target_w))
+
+        hard = (soft > self.threshold).int()
+        mask = Mask(hard, soft)
+
+        hard_dilate = self.expandmask(mask.hard)
+        mask_dilate = Mask(hard_dilate)
+
+        if dilate:
+            m = {'std': mask, 'dilate': mask_dilate}
+        else:
+            m = {'std': mask, 'dilate': mask}
+        meta['masks'].append(m)
+        return m
+
+
 class MaskUnit(nn.Module):
     '''
     Generates the mask and applies the gumbel softmax trick

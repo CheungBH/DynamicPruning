@@ -5,6 +5,7 @@ try:
 except ImportError:
     from torch.utils.model_zoo import load_url as load_state_dict_from_url
 import dynconv
+from dynconv.maskunit import StatMaskUnit
 import models.resnet_util
 
 
@@ -23,7 +24,7 @@ class BasicBlock(nn.Module):
     expansion = 1
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
-                 base_width=64, dilation=1, norm_layer=None, sparse=False):
+                 base_width=64, dilation=1, norm_layer=None, sparse=False, mask_type="conv"):
         super(BasicBlock, self).__init__()
         assert groups == 1
         assert dilation == 1
@@ -40,8 +41,13 @@ class BasicBlock(nn.Module):
         self.sparse = sparse
 
         if sparse:
+            if mask_type == "conv":
             # in the resnet basic block, the first convolution is already strided, so mask_stride = 1
-            self.masker = dynconv.MaskUnit(channels=inplanes, stride=stride, dilate_stride=1)
+                self.masker = dynconv.MaskUnit(channels=inplanes, stride=stride, dilate_stride=1)
+            elif mask_type == "stat":
+                self.masker = StatMaskUnit(stride=stride, dilate_stride=1)
+            else:
+                raise NotImplementedError
 
         self.fast = False
 

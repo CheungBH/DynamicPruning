@@ -31,6 +31,7 @@ def main():
     parser.add_argument('--batchsize', default=256, type=int, help='batch size')
     parser.add_argument('--epochs', default=350, type=int, help='number of epochs')
     parser.add_argument('--model', type=str, default='resnet32', help='network model name')
+    parser.add_argument('--mask_type', type=str, default='conv', help='Type of mask')
     parser.add_argument('--load', type=str, default='', help='load model path')
 
     # parser.add_argument('--resnet_n', default=5, type=int, help='number of layers per resnet stage (5 for Resnet-32)')
@@ -68,7 +69,7 @@ def main():
 
     ## MODEL
     net_module = models.__dict__[args.model]
-    model = net_module(sparse=args.budget >= 0).to(device=device)
+    model = net_module(sparse=args.budget >= 0, mask_type=args.mask_type).to(device=device)
 
     file_path = os.path.join(args.save_dir, "log.txt")
 

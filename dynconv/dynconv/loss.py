@@ -36,7 +36,10 @@ class SparsityCriterion(nn.Module):
             t = m_dil.total_positions * m_dil.flops_per_position + \
                 m.total_positions * m.flops_per_position
 
-            layer_perc = c / t
+            try:
+                layer_perc = c / t
+            except RuntimeError:
+                layer_perc = torch.true_divide(c, t)
             # logger.add('layer_perc_'+str(i), layer_perc.item())
             assert layer_perc >= 0 and layer_perc <= 1, layer_perc
             loss_block += max(0, layer_perc - upper_bound)**2  # upper bound
