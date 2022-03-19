@@ -1,10 +1,14 @@
 #-*-coding:utf-8-*-
 
 cmds = [
-    "python main_cifar.py --model resnet32 --save_dir exp/cifar10_no_dilation/pretrain --budget -1",
-    # "python main_cifar.py --model resnet32 --save_dir exp/cifar10_no_dilation/s90 --budget 0.9 "
-    # "--pretrain exp/cifar10_no_dilation/pretrain/checkpoint.pth",
-    # "python main_imagenet.py --model resnet50 --save_dir exp/imagenet_no_dilation/s100 --budget 1 --dataset-root /media/ssd0/imagenet",
+    "python main_cifar.py --model resnet32_BN -s exp/diff_mask/r32BN_baseline --budget -1",
+    "python main_cifar.py --model resnet32_BN -s exp/diff_mask/r32BN_s100_stat --mask_type stat --budget 1 --load exp/diff_mask/r32BN_baseline/checkpoint_best.pth",
+    "python main_cifar.py --model resnet32_BN -s exp/diff_mask/r32BN_s50_stat --mask_type stat --budget 0.5 --load exp/diff_mask/r32BN_baseline/checkpoint_best.pth",
+    "python main_cifar.py --model resnet32_BN -s exp/diff_mask/r32BN_s75_stat --mask_type stat --budget 0.75 --load exp/diff_mask/r32BN_baseline/checkpoint_best.pth",
+
+    "python main_cifar.py --model resnet32_BN -s exp/diff_mask/r32BN_s100_conv --budget 1 --load exp/diff_mask/r32BN_baseline/checkpoint_best.pth",
+    "python main_cifar.py --model resnet32_BN -s exp/diff_mask/r32BN_s50_conv --budget 0.5 --load exp/diff_mask/r32BN_baseline/checkpoint_best.pth",
+    "python main_cifar.py --model resnet32_BN -s exp/diff_mask/r32BN_s75_conv --budget 0.75 --load exp/diff_mask/r32BN_baseline/checkpoint_best.pth",
 
 ]
 
