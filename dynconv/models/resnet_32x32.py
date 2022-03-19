@@ -77,7 +77,7 @@ class ResNet_32x32(nn.Module):
 
 
 class ResNet_BN_32x32(nn.Module):
-    def __init__(self, layers, num_classes=10, pretrained=False, sparse=False):
+    def __init__(self, layers, num_classes=10, pretrained=False, sparse=False, mask_type="conv"):
         super(ResNet_BN_32x32, self).__init__()
 
         if pretrained is not False:
@@ -91,9 +91,9 @@ class ResNet_BN_32x32(nn.Module):
         self.conv1 = conv3x3(3, 16)
         self.bn1 = nn.BatchNorm2d(16)
         self.relu = nn.ReLU(inplace=True)
-        self.layer1 = self._make_layer(block, 16, layers[0])
-        self.layer2 = self._make_layer(block, 32, layers[1], stride=2)
-        self.layer3 = self._make_layer(block, 64, layers[2], stride=2)
+        self.layer1 = self._make_layer(block, 16, layers[0], mask_type="conv")
+        self.layer2 = self._make_layer(block, 32, layers[1], stride=2, mask_type="conv")
+        self.layer3 = self._make_layer(block, 64, layers[2], stride=2, mask_type="conv")
         self.avgpool = nn.AvgPool2d(8)
         self.fc = nn.Linear(64 * block.expansion, num_classes)
 
@@ -105,7 +105,7 @@ class ResNet_BN_32x32(nn.Module):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
-    def _make_layer(self, block, planes, blocks, stride=1):
+    def _make_layer(self, block, planes, blocks, stride=1, mask_type="conv"):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
@@ -115,10 +115,10 @@ class ResNet_BN_32x32(nn.Module):
             )
 
         layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample, sparse=self.sparse))
+        layers.append(block(self.inplanes, planes, stride, downsample, sparse=self.sparse, mask_type="conv"))
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes, sparse=self.sparse))
+            layers.append(block(self.inplanes, planes, sparse=self.sparse, mask_type="conv"))
 
         return nn.Sequential(*layers)
 
@@ -153,6 +153,4 @@ def resnet32(sparse=False, mask_type="conv",**kwargs):
     return ResNet_32x32([5,5,5], sparse=sparse, mask_type=mask_type, **kwargs)
 
 def resnet32_BN(sparse=False, mask_type="conv",**kwargs):
-    if mask_type != "conv":
-        raise NotImplementedError
-    return ResNet_BN_32x32([5,5,5], sparse=sparse, **kwargs)
+    return ResNet_BN_32x32([5,5,5], sparse=sparse, mask_type=mask_type, **kwargs)

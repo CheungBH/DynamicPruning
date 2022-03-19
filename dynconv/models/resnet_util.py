@@ -82,7 +82,7 @@ class Bottleneck(nn.Module):
     expansion = 4
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
-                 base_width=64, dilation=1, norm_layer=None, sparse=False, resolution_mask=False, mask_block=False):
+                 base_width=64, dilation=1, norm_layer=None, sparse=False, resolution_mask=False, mask_block=False, mask_type="conv"):
         super(Bottleneck, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
@@ -109,7 +109,14 @@ class Bottleneck(nn.Module):
         if sparse:
             if resolution_mask and not self.mask_block:
                 return
-            self.masker = dynconv.MaskUnit(channels=inplanes, stride=stride, dilate_stride=stride)
+            else:
+                if mask_type == "conv":
+                    # in the resnet basic block, the first convolution is already strided, so mask_stride = 1
+                    self.masker = dynconv.MaskUnit(channels=inplanes, stride=stride, dilate_stride=1)
+                elif mask_type == "stat":
+                    self.masker = StatMaskUnit(stride=stride, dilate_stride=1)
+                else:
+                    raise NotImplementedError
 
     def forward(self, input):
         x, meta = input
