@@ -32,7 +32,7 @@ class ResNet(nn.Module):
 
     def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
                  groups=1, width_per_group=64, replace_stride_with_dilation=None,
-                 norm_layer=None, sparse=False, width_mult=1., model_cfg=None, resolution_mask=False, **kwargs):
+                 norm_layer=None, sparse=False, width_mult=1., resolution_mask=False, mask_type="conv", **kwargs):
         super(ResNet, self).__init__()
         self.sparse = sparse
 
@@ -56,13 +56,13 @@ class ResNet(nn.Module):
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layer(block, int(64*width_mult), layers[0], resolution_mask=resolution_mask)
+        self.layer1 = self._make_layer(block, int(64*width_mult), layers[0], resolution_mask=resolution_mask, mask_type=mask_type)
         self.layer2 = self._make_layer(block, int(128*width_mult), layers[1], stride=2,
-                                       dilate=replace_stride_with_dilation[0], resolution_mask=resolution_mask)
+                                       dilate=replace_stride_with_dilation[0], resolution_mask=resolution_mask, mask_type=mask_type)
         self.layer3 = self._make_layer(block, int(256*width_mult), layers[2], stride=2,
-                                       dilate=replace_stride_with_dilation[1], resolution_mask=resolution_mask)
+                                       dilate=replace_stride_with_dilation[1], resolution_mask=resolution_mask, mask_type=mask_type)
         self.layer4 = self._make_layer(block, int(512*width_mult), layers[3], stride=2,
-                                       dilate=replace_stride_with_dilation[2], resolution_mask=resolution_mask)
+                                       dilate=replace_stride_with_dilation[2], resolution_mask=resolution_mask, mask_type=mask_type)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(int(512*width_mult * block.expansion), num_classes)
 
@@ -80,7 +80,7 @@ class ResNet(nn.Module):
                 elif isinstance(m, BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
 
-    def _make_layer(self, block, planes, blocks, stride=1, dilate=False, resolution_mask=False):
+    def _make_layer(self, block, planes, blocks, stride=1, dilate=False, resolution_mask=False, mask_type="conv"):
         norm_layer = self._norm_layer
         downsample = None
         previous_dilation = self.dilation
@@ -96,12 +96,12 @@ class ResNet(nn.Module):
         layers = []
         layers.append(block(self.inplanes, planes, stride, downsample, self.groups,
                             self.base_width, previous_dilation, norm_layer, sparse=self.sparse,
-                            resolution_mask=resolution_mask, mask_block=True))
+                            resolution_mask=resolution_mask, mask_block=True, mask_type=mask_type))
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
             layers.append(block(self.inplanes, planes, groups=self.groups, base_width=self.base_width,
                                 dilation=self.dilation, norm_layer=norm_layer, sparse=self.sparse,
-                                resolution_mask=resolution_mask, mask_block=False))
+                                resolution_mask=resolution_mask, mask_block=False, mask_type=mask_type))
 
         return nn.Sequential(*layers)
 
