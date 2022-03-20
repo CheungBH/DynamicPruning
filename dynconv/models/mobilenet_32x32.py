@@ -67,7 +67,8 @@ class InvertedResidual(nn.Module):
 
 
 class InvertedResidualBlock(nn.Module):
-    def __init__(self, inp, oup, stride, expand_ratio, norm_layer=None, sparse=False, resolution_mask=False, mask_block=False):
+    def __init__(self, inp, oup, stride, expand_ratio, norm_layer=None, sparse=False, resolution_mask=False,
+                 mask_block=False, mask_type="conv"):
         super(InvertedResidualBlock, self).__init__()
         self.stride = stride
         assert stride in [1, 2]
@@ -80,7 +81,10 @@ class InvertedResidualBlock(nn.Module):
                 if self.mask_block:
                     self.masker = dynconv.MaskUnit(channels=inp, stride=stride, dilate_stride=1)
             else:
-                self.masker = dynconv.MaskUnit(channels=inp, stride=stride, dilate_stride=1)
+                if mask_type == "conv":
+                    self.masker = dynconv.MaskUnit(channels=inp, stride=stride, dilate_stride=1)
+                elif mask_type == "stat":
+                    self.masker = dynconv.StatMaskUnit(stride=stride, dilate_stride=1)
 
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
@@ -150,6 +154,7 @@ class MobileNetV2_32x32(nn.Module):
                  num_classes=10,
                  width_mult=1.0,
                  inverted_residual_setting=None,
+                 mask_type="conv",
                  sparse=False,
                  round_nearest=8,
                  block=None,
@@ -205,7 +210,7 @@ class MobileNetV2_32x32(nn.Module):
             for i in range(n):
                 stride = s if i == 0 else 1
                 features.append(block(input_channel, output_channel, stride, expand_ratio=t, norm_layer=norm_layer,
-                                      sparse=sparse))
+                                      sparse=sparse, mask_type=mask_type))
                 input_channel = output_channel
         # building last several layers
         # features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer))

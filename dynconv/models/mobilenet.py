@@ -72,6 +72,7 @@ class MobileNetV2(nn.Module):
                  width_mult=1.0,
                  sparse=False,
                  model_cfg="",
+                 mask_type="conv",
                  resolution_mask=False,
                  round_nearest=8,
                  block=None,
@@ -145,7 +146,7 @@ class MobileNetV2(nn.Module):
                 stride = s if i == 0 else 1
                 mask_block = int((s == 2 and i == 1))
                 features.append(block(input_channel, output_channel, stride, expand_ratio=t, norm_layer=norm_layer,
-                                      sparse=sparse, resolution_mask=resolution_mask, mask_block=mask_block))
+                                      sparse=sparse, resolution_mask=resolution_mask, mask_block=mask_block, mask_type=mask_type))
                 input_channel = output_channel
         # building last several layers
         # features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer))
