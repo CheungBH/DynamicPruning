@@ -41,7 +41,7 @@ def main():
                     help='path to latest checkpoint (default: none)')
     parser.add_argument('-e', '--evaluate', action='store_true', help='evaluation mode')
     parser.add_argument('--plot_ponder', action='store_true', help='plot ponder cost')
-    parser.add_argument('--workers', default=0, type=int, help='number of dataloader workers')
+    parser.add_argument('--workers', default=4, type=int, help='number of dataloader workers')
     args =  parser.parse_args()
     print('Args:', args)
 
@@ -63,7 +63,7 @@ def main():
     train_loader = torch.utils.data.DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=args.workers, pin_memory=False)
 
     valset = datasets.CIFAR10(root='../data', train=False, download=True, transform=transform_test)
-    val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=False, num_workers=0, pin_memory=False)
+    val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=False, num_workers=4, pin_memory=False)
 
     classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 

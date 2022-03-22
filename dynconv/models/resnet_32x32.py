@@ -91,9 +91,9 @@ class ResNet_BN_32x32(nn.Module):
         self.conv1 = conv3x3(3, 16)
         self.bn1 = nn.BatchNorm2d(16)
         self.relu = nn.ReLU(inplace=True)
-        self.layer1 = self._make_layer(block, 16, layers[0], mask_type="conv")
-        self.layer2 = self._make_layer(block, 32, layers[1], stride=2, mask_type="conv")
-        self.layer3 = self._make_layer(block, 64, layers[2], stride=2, mask_type="conv")
+        self.layer1 = self._make_layer(block, 16, layers[0], mask_type=mask_type)
+        self.layer2 = self._make_layer(block, 32, layers[1], stride=2, mask_type=mask_type)
+        self.layer3 = self._make_layer(block, 64, layers[2], stride=2, mask_type=mask_type)
         self.avgpool = nn.AvgPool2d(8)
         self.fc = nn.Linear(64 * block.expansion, num_classes)
 
@@ -115,10 +115,10 @@ class ResNet_BN_32x32(nn.Module):
             )
 
         layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample, sparse=self.sparse, mask_type="conv"))
+        layers.append(block(self.inplanes, planes, stride, downsample, sparse=self.sparse, mask_type=mask_type))
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes, sparse=self.sparse, mask_type="conv"))
+            layers.append(block(self.inplanes, planes, sparse=self.sparse, mask_type=mask_type))
 
         return nn.Sequential(*layers)
 
