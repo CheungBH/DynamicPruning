@@ -79,11 +79,13 @@ class StatMaskUnitMom(nn.Module):
         target_index = int(target_h * target_w * self.budget)
         soft = torch.true_divide(summed_mask, channel_num).unsqueeze(dim=1)
         soft = nn.functional.upsample_nearest(soft, size=(target_h, target_w))
-        sorted_values, _ = torch.sort(soft.view(bs, -1), dim=1)
-        target_thresh = torch.mean(sorted_values[:, target_index])
-
-        hard = (soft > target_thresh).int()
-        self.threshold = self.threshold * self.momentum + torch.ones(1).cuda() * target_thresh * (1-self.momentum)
+        if self.training:
+            sorted_values, _ = torch.sort(soft.view(bs, -1), dim=1)
+            target_thresh = torch.mean(sorted_values[:, target_index])
+            hard = (soft > target_thresh).int()
+            self.threshold = self.threshold * self.momentum + torch.ones(1).cuda() * target_thresh * (1 - self.momentum)
+        else:
+            hard = (soft > self.threshold).int()
 
         mask = Mask(hard, soft)
 
@@ -109,7 +111,7 @@ class MaskUnit(nn.Module):
         self.gumbel = Gumbel()
         self.expandmask = ExpandMask(stride=dilate_stride)
 
-    def forward(self, x, meta):
+    def forward(self, x, meta, training=""):
         soft = self.maskconv(x)
         hard = self.gumbel(soft, meta['gumbel_temp'], meta['gumbel_noise'])
         mask = Mask(hard, soft)
