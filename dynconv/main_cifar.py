@@ -28,11 +28,13 @@ def main():
     parser.add_argument('--lr_decay', default=[150,250], nargs='+', type=int, help='learning rate decay epochs')
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
     parser.add_argument('--weight_decay', default=5e-4, type=float, help='weight decay')
+    parser.add_argument('--stat_thresh', default=0, type=float, help='Threshold of stat mask')
     parser.add_argument('--batchsize', default=256, type=int, help='batch size')
     parser.add_argument('--epochs', default=350, type=int, help='number of epochs')
     parser.add_argument('--model', type=str, default='resnet32', help='network model name')
     parser.add_argument('--mask_type', type=str, default='conv', help='Type of mask')
     parser.add_argument('--load', type=str, default='', help='load model path')
+    parser.add_argument('--no_attention', action='store_true', help='run without attention')
 
     # parser.add_argument('--resnet_n', default=5, type=int, help='number of layers per resnet stage (5 for Resnet-32)')
     parser.add_argument('--budget', default=-1, type=float, help='computational budget (between 0 and 1) (-1 for no sparsity)')
@@ -69,7 +71,8 @@ def main():
 
     ## MODEL
     net_module = models.__dict__[args.model]
-    model = net_module(sparse=args.budget >= 0, mask_type=args.mask_type).to(device=device)
+    model = net_module(sparse=args.budget >= 0, mask_type=args.mask_type, budget=args.budget,
+                       momentum=args.momentum).to(device=device)
 
     file_path = os.path.join(args.save_dir, "log.txt")
 

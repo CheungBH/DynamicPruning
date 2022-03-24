@@ -63,6 +63,40 @@ class StatMaskUnit(nn.Module):
         meta['masks'].append(m)
         return m
 
+class StatMaskUnitMom(nn.Module):
+    def __init__(self, budget=0.5, init_thresh=0.5, stride=1, dilate_stride=1, momentum=0.9):
+        super(StatMaskUnitMom, self).__init__()
+        self.threshold = nn.Parameter(init_thresh * torch.ones(1, 1, 1, 1))
+        self.expandmask = ExpandMask(stride=dilate_stride)
+        self.stride = stride
+        self.momentum = momentum
+        self.budget = budget
+
+    def forward(self, x, meta):
+        bs, channel_num, orig_h, orig_w = x.shape
+        target_index = int(orig_h * orig_w * self.budget)
+        summed_mask = torch.sum((x == 0).int(), dim=1)
+        target_h, target_w = int(orig_h / self.stride), int(orig_w / self.stride)
+        soft = torch.true_divide(summed_mask, channel_num).unsqueeze(dim=1)
+        soft = nn.functional.upsample_nearest(soft, size=(target_h, target_w))
+        sorted_values, _ = torch.sort(soft.view(bs, -1), dim=1)
+        target_thresh = torch.mean(sorted_values[:, target_index])
+
+        hard = (soft > target_thresh).int()
+        self.threshold = self.threshold * self.momentum + target_thresh * (1-self.momentum)
+
+        mask = Mask(hard, soft)
+
+        hard_dilate = self.expandmask(mask.hard)
+        mask_dilate = Mask(hard_dilate)
+
+        if dilate:
+            m = {'std': mask, 'dilate': mask_dilate}
+        else:
+            m = {'std': mask, 'dilate': mask}
+        meta['masks'].append(m)
+        return m
+
 
 class MaskUnit(nn.Module):
     '''
