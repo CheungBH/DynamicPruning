@@ -30,9 +30,9 @@ model_urls = {
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
+    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False, model_cfg=None,
                  groups=1, width_per_group=64, replace_stride_with_dilation=None,
-                 norm_layer=None, sparse=False, width_mult=1., resolution_mask=False, **kwargs):
+                 norm_layer=None, sparse=False, width_mult=1., **kwargs):
         super(ResNet, self).__init__()
         self.sparse = sparse
 
@@ -56,13 +56,13 @@ class ResNet(nn.Module):
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layer(block, int(64*width_mult), layers[0], resolution_mask=resolution_mask, **kwargs)
+        self.layer1 = self._make_layer(block, int(64*width_mult), layers[0], **kwargs)
         self.layer2 = self._make_layer(block, int(128*width_mult), layers[1], stride=2,
-                                       dilate=replace_stride_with_dilation[0], resolution_mask=resolution_mask, **kwargs)
+                                       dilate=replace_stride_with_dilation[0], **kwargs)
         self.layer3 = self._make_layer(block, int(256*width_mult), layers[2], stride=2,
-                                       dilate=replace_stride_with_dilation[1], resolution_mask=resolution_mask, **kwargs)
+                                       dilate=replace_stride_with_dilation[1], **kwargs)
         self.layer4 = self._make_layer(block, int(512*width_mult), layers[3], stride=2,
-                                       dilate=replace_stride_with_dilation[2], resolution_mask=resolution_mask, **kwargs)
+                                       dilate=replace_stride_with_dilation[2], **kwargs)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(int(512*width_mult * block.expansion), num_classes)
 
