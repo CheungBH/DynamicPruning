@@ -40,6 +40,7 @@ class StatMaskUnit(nn.Module):
     def __init__(self, init_thresh=0.5, stride=1, dilate_stride=1, ):
         super(StatMaskUnit, self).__init__()
         self.threshold = nn.Parameter(init_thresh * torch.ones(1, 1, 1, 1))
+        self.threshold.requires_grad = False
         self.expandmask = ExpandMask(stride=dilate_stride)
         self.stride = stride
 
@@ -66,7 +67,7 @@ class StatMaskUnit(nn.Module):
 class StatMaskUnitMom(nn.Module):
     def __init__(self, budget=0.5, init_thresh=0.5, stride=1, dilate_stride=1, momentum=0.9):
         super(StatMaskUnitMom, self).__init__()
-        self.threshold = torch.ones(1).cuda() * init_thresh
+        self.threshold = nn.Parameter(init_thresh * torch.ones(1, 1, 1, 1))
         self.expandmask = ExpandMask(stride=dilate_stride)
         self.stride = stride
         self.momentum = momentum
@@ -83,7 +84,8 @@ class StatMaskUnitMom(nn.Module):
             sorted_values, _ = torch.sort(soft.view(bs, -1), dim=1)
             target_thresh = torch.mean(sorted_values[:, target_index])
             hard = (soft > target_thresh).int()
-            self.threshold = self.threshold * self.momentum + torch.ones(1).cuda() * target_thresh * (1 - self.momentum)
+            updated_thresh = self.threshold * self.momentum + torch.ones(1).cuda() * target_thresh * (1 - self.momentum)
+            self.threshold = nn.Parameter(updated_thresh.data * torch.ones(1, 1, 1, 1).cuda())
         else:
             hard = (soft > self.threshold).int()
 
