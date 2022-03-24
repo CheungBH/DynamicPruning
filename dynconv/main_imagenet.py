@@ -59,7 +59,7 @@ def main():
                                     std=[0.229, 0.224, 0.225])
     net_module = models.__dict__[args.model]
     model = net_module(sparse=args.budget >= 0, model_cfg=args.model_cfg, resolution_mask=args.resolution_mask,
-                       mask_type=args.mask_type).to(device=device)
+                       mask_type=args.mask_type, momentum=args.momentum, budget=args.budget).to(device=device)
 
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0}
     _ = model(torch.rand((1, 3, res, res)).cuda(), meta)
