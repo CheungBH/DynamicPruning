@@ -94,7 +94,7 @@ def main():
             super(Loss, self).__init__()
             self.task_loss = nn.CrossEntropyLoss().to(device=device)
             self.sparsity_loss = dynconv.SparsityCriterion(args.budget, args.epochs) \
-                if args.budget >= 0 or "stat" not in args.mask_type else None
+                if args.budget >= 0 and "stat" not in args.mask_type else None
 
         def forward(self, output, target, meta):
             task_loss, sparse_loss = self.task_loss(output, target), torch.zeros(1).cuda()
