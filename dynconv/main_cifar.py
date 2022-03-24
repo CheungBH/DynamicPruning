@@ -65,7 +65,7 @@ def main():
     train_loader = torch.utils.data.DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=args.workers, pin_memory=False)
 
     valset = datasets.CIFAR10(root='../data', train=False, download=True, transform=transform_test)
-    val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=False, num_workers=4, pin_memory=False)
+    val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=False, num_workers=0, pin_memory=False)
 
     classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
@@ -81,7 +81,8 @@ def main():
         def __init__(self, budget=1):
             super(Loss, self).__init__()
             self.task_loss = nn.CrossEntropyLoss().to(device=device)
-            self.sparsity_loss = dynconv.SparsityCriterion(args.budget, args.epochs) if args.budget >= 0 else None
+            self.sparsity_loss = dynconv.SparsityCriterion(args.budget, args.epochs) \
+                if args.budget >= 0 or "stat" not in args.mask_type else None
 
         def forward(self, output, target, meta):
             task_loss, sparse_loss = self.task_loss(output, target), torch.zeros(1).cuda()
