@@ -67,7 +67,7 @@ class StatMaskUnit(nn.Module):
 
 class StatMaskUnitMom(nn.Module):
     def __init__(self, budget=0.5, init_thresh=0.5, stride=1, dilate_stride=1, momentum=0.9,
-                 individual_forward=Falsegit, **kwargs):
+                 individual_forward=False, **kwargs):
         super(StatMaskUnitMom, self).__init__()
         self.threshold = nn.Parameter(init_thresh * torch.ones(1, 1, 1, 1))
         self.expandmask = ExpandMask(stride=dilate_stride)
