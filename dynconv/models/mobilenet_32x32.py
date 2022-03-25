@@ -82,7 +82,7 @@ class InvertedResidualBlock(nn.Module):
                     self.masker = dynconv.MaskUnit(channels=inp, stride=stride, dilate_stride=1)
             else:
                 if mask_type == "conv":
-                    self.masker = dynconv.MaskUnit(channels=inp, stride=stride, dilate_stride=1)
+                    self.masker = dynconv.MaskUnit(channels=inp, stride=stride, dilate_stride=1, **kwargs)
                 elif mask_type == "stat":
                     self.masker = dynconv.StatMaskUnit(stride=stride, dilate_stride=1)
                 elif mask_type == "stat_mom":

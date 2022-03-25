@@ -182,13 +182,14 @@ class Squeeze(nn.Module):
     """
 
     def __init__(self, channels, stride=1, mask_kernel=3, no_attention=False):
+        padding = 1 if mask_kernel == 3 else 0
         super(Squeeze, self).__init__()
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.no_attention = no_attention
         if not self.no_attention:
             self.fc = nn.Linear(channels, 1, bias=True)
         self.conv = nn.Conv2d(channels, 1, stride=stride,
-                              kernel_size=mask_kernel, padding=1, bias=True)
+                              kernel_size=mask_kernel, padding=padding, bias=True)
 
     def forward(self, x):
         b, c, _, _ = x.size()
