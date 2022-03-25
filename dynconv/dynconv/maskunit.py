@@ -78,7 +78,7 @@ class StatMaskUnitMom(nn.Module):
         _, c, w, h = masks.shape
         hard_masks = torch.zeros(1, c, w, h).cuda()
         for thresh, mask in zip(threshs, masks):
-            hard_mask = (mask < thresh).unsqueeze(dim=0)
+            hard_mask = (mask <= thresh).unsqueeze(dim=0)
             hard_masks = torch.cat((hard_masks, hard_mask), dim=0)
         return hard_masks[1:].int()
 
@@ -96,11 +96,11 @@ class StatMaskUnitMom(nn.Module):
             if self.ind_for:
                 hard = self.sample_mask_forward(sample_thresh, soft)
             else:
-                hard = (soft > target_thresh).int()
+                hard = (soft <= target_thresh).int()
             updated_thresh = self.threshold * self.momentum + torch.ones(1).cuda() * target_thresh * (1 - self.momentum)
             self.threshold = nn.Parameter(updated_thresh.data * torch.ones(1, 1, 1, 1).cuda())
         else:
-            hard = (soft > self.threshold).int()
+            hard = (soft <= self.threshold).int()
 
         mask = Mask(hard, soft)
 
