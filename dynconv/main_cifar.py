@@ -34,7 +34,9 @@ def main():
     parser.add_argument('--model', type=str, default='resnet32', help='network model name')
     parser.add_argument('--mask_type', type=str, default='conv', help='Type of mask')
     parser.add_argument('--load', type=str, default='', help='load model path')
+    parser.add_argument('--mask_kernel', default=3, type=int, help='number of epochs')
     parser.add_argument('--no_attention', action='store_true', help='run without attention')
+    parser.add_argument('--individual_forward', action='store_true', help='run without attention')
 
     # parser.add_argument('--resnet_n', default=5, type=int, help='number of layers per resnet stage (5 for Resnet-32)')
     parser.add_argument('--budget', default=-1, type=float, help='computational budget (between 0 and 1) (-1 for no sparsity)')
@@ -72,7 +74,8 @@ def main():
     ## MODEL
     net_module = models.__dict__[args.model]
     model = net_module(sparse=args.budget >= 0, mask_type=args.mask_type, budget=args.budget,
-                       momentum=args.momentum).to(device=device)
+                       momentum=args.momentum, mask_kernel=args.mask_kernel, no_attention=args.no_attention,
+                       individual_forward=args.individual_forward).to(device=device)
 
     file_path = os.path.join(args.save_dir, "log.txt")
 
