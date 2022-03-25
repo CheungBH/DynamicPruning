@@ -5,9 +5,20 @@ cmds = [
     # "python main_cifar.py --model MobileNetV2_32x32 -s exp/diff_mask_mobile/baseline_k1 --mask_kernel 1 --budget -1 --workers 8",
     # "python main_cifar.py --model MobileNetV2_32x32 -s exp/diff_mask_mobile/baseline_NoAtt --mask_kernel 3 --no_attention --budget -1 --workers 8",
     # "python main_cifar.py --model MobileNetV2_32x32 -s exp/diff_mask_mobile/baseline_k1_NoAtt --mask_kernel 1 --no_attention --budget -1 --workers 8",
+
+    # "python main_cifar.py --model MobileNetV2_32x32 -s exp/diff_mask_mobile/k1_s50 --mask_kernel 1 --budget 0.5 --load exp/diff_mask_mobile/baseline_k1/checkpoint_best.pth",
+    # "python main_cifar.py --model MobileNetV2_32x32 -s exp/diff_mask_mobile/NoAtt_s50 --mask_kernel 3 --no_attention --budget 0.5 --load exp/diff_mask_mobile/baseline_NoAtt/checkpoint_best.pth",
+    # "python main_cifar.py --model MobileNetV2_32x32 -s exp/diff_mask_mobile/k1_NoAtt_s50 --mask_kernel 1 --no_attention --budget 0.5 --load exp/diff_mask_mobile/baseline_k1_NoAtt/checkpoint_best.pth",
+
     "python main_cifar.py --model ResNet_BN_32x32 -s exp/diff_mask/baseline_k1 --mask_kernel 1 --budget -1",
     "python main_cifar.py --model ResNet_BN_32x32 -s exp/diff_mask/baseline_NoAtt --mask_kernel 3 --no_attention --budget -1",
-    "python main_cifar.py --model ResNet_BN_32x32 -s exp/diff_mask/baseline_k1_NoAtt --mask_kernel 1 --no_attention --budget -1",
+    "python main_cifar.py --model ResNet_BN_32x32 -s exp/diff_mask/baseline_k1_NoAtt --mask_kernel 1 --no_attention --budget -1"
+
+    "python main_cifar.py --model ResNet_BN_32x32 -s exp/diff_mask/k1_s50 --budget 0.5 --load exp/diff_mask/baseline_k1/checkpoint_best.pth --mask_kernel 1",
+    "python main_cifar.py --model ResNet_BN_32x32 -s exp/diff_mask/NoAtt_s50 --budget 0.5 --load exp/diff_mask/baseline_NoAtt/checkpoint_best.pth --mask_kernel 3 --no_attention",
+    "python main_cifar.py --model ResNet_BN_32x32 -s exp/diff_mask/k1_NoAtt_s50 --budget 0.5 --load exp/diff_mask/baseline_k1_NoAtt/checkpoint_best.pth --mask_kernel 1 --no_attentio"
+
+
     #"python main_cifar.py --model resnet32_BN -s exp/diff_mask/r32BN_s75_stat_mom --mask_type stat_mom --budget 0.75 --load exp/diff_mask/r32BN_baseline/checkpoint_best.pth",
     #"python main_cifar.py --model resnet32_BN -s exp/diff_mask/r32BN_s25_stat_mom --mask_type stat_mom --budget 0.25 --load exp/diff_mask/r32BN_baseline/checkpoint_best.pth",
 
