@@ -65,13 +65,22 @@ class StatMaskUnit(nn.Module):
         return m
 
 class StatMaskUnitMom(nn.Module):
-    def __init__(self, budget=0.5, init_thresh=0.5, stride=1, dilate_stride=1, momentum=0.9):
+    def __init__(self, budget=0.5, init_thresh=0.5, stride=1, dilate_stride=1, momentum=0.9, individual_forward=True):
         super(StatMaskUnitMom, self).__init__()
         self.threshold = nn.Parameter(init_thresh * torch.ones(1, 1, 1, 1))
         self.expandmask = ExpandMask(stride=dilate_stride)
         self.stride = stride
         self.momentum = momentum
         self.budget = budget
+        self.ind_for = individual_forward
+
+    def sample_mask_forward(self, threshs, masks):
+        _, c, w, h = masks.shape
+        hard_masks = torch.zeros(1, c, w, h).cuda()
+        for thresh, mask in zip(threshs, masks):
+            hard_mask = (mask < thresh).unsqueeze(dim=0)
+            hard_masks = torch.cat((hard_masks, hard_mask), dim=0)
+        return hard_masks[1:].int()
 
     def forward(self, x, meta):
         bs, channel_num, orig_h, orig_w = x.shape
@@ -82,8 +91,12 @@ class StatMaskUnitMom(nn.Module):
         soft = nn.functional.upsample_nearest(soft, size=(target_h, target_w))
         if self.training:
             sorted_values, _ = torch.sort(soft.view(bs, -1), dim=1)
-            target_thresh = torch.mean(sorted_values[:, target_index])
-            hard = (soft > target_thresh).int()
+            sample_thresh = sorted_values[:, target_index]
+            target_thresh = torch.mean(sample_thresh)
+            if self.ind_for:
+                hard = self.sample_mask_forward(sample_thresh, soft)
+            else:
+                hard = (soft > target_thresh).int()
             updated_thresh = self.threshold * self.momentum + torch.ones(1).cuda() * target_thresh * (1 - self.momentum)
             self.threshold = nn.Parameter(updated_thresh.data * torch.ones(1, 1, 1, 1).cuda())
         else:
