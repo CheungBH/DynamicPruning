@@ -80,7 +80,7 @@ class ResNet(nn.Module):
                 elif isinstance(m, BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
 
-    def _make_layer(self, block, planes, blocks, stride=1, dilate=False, resolution_mask=False, **kwargs):
+    def _make_layer(self, block, planes, blocks, stride=1, dilate=False, **kwargs):
         norm_layer = self._norm_layer
         downsample = None
         previous_dilation = self.dilation
@@ -94,14 +94,13 @@ class ResNet(nn.Module):
             )
 
         layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample, self.groups,
-                            self.base_width, previous_dilation, norm_layer, sparse=self.sparse,
-                            resolution_mask=resolution_mask, mask_block=True, **kwargs))
+        layers.append(block(self.inplanes, planes, stride, downsample, self.groups, self.base_width,
+                            previous_dilation, norm_layer, sparse=self.sparse, mask_block=True, **kwargs))
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
             layers.append(block(self.inplanes, planes, groups=self.groups, base_width=self.base_width,
                                 dilation=self.dilation, norm_layer=norm_layer, sparse=self.sparse,
-                                resolution_mask=resolution_mask, mask_block=False, **kwargs))
+                                mask_block=False, **kwargs))
 
         return nn.Sequential(*layers)
 

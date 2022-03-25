@@ -36,6 +36,9 @@ def main():
     parser.add_argument('--model_cfg', type=str, default='baseline', help='network model name')
     parser.add_argument('--load', type=str, default='', help='load model path')
     parser.add_argument('--mask_type', type=str, default='conv', help='Type of mask')
+    parser.add_argument('--mask_kernel', default=3, type=int, help='number of epochs')
+    parser.add_argument('--no_attention', action='store_true', help='run without attention')
+    parser.add_argument('--individual_forward', action='store_true', help='run without attention')
 
     parser.add_argument('--budget', default=-1, type=float, help='computational budget (between 0 and 1) (-1 for no sparsity)')
     parser.add_argument('-s', '--save_dir', type=str, default='', help='directory to save model')
@@ -59,7 +62,9 @@ def main():
                                     std=[0.229, 0.224, 0.225])
     net_module = models.__dict__[args.model]
     model = net_module(sparse=args.budget >= 0, model_cfg=args.model_cfg, resolution_mask=args.resolution_mask,
-                       mask_type=args.mask_type, momentum=args.momentum, budget=args.budget).to(device=device)
+                       mask_type=args.mask_type, momentum=args.momentum, budget=args.budget,
+                       mask_kernel=args.mask_kernel, no_attention=args.no_attention,
+                       individual_forward=args.individual_forward).to(device=device)
 
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0}
     _ = model(torch.rand((1, 3, res, res)).cuda(), meta)
