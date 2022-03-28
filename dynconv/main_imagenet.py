@@ -19,11 +19,10 @@ import utils.utils as utils
 import utils.viz as viz
 from torch.backends import cudnn as cudnn
 
-try:
-    from apex import amp
-    mix_precision = True
-except ImportError:
-    mix_precision = False
+
+from apex import amp
+mix_precision = True
+
 cudnn.benchmark = True
 device='cuda'
 
@@ -276,7 +275,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
         loss = s_loss + t_loss if s_loss else t_loss
 
         if mix_precision:
-            with amp.scale_loss(loss, self.optimizer) as scaled_loss:
+            with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
         else:
             loss.backward()
