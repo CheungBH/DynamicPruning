@@ -51,8 +51,10 @@ class ResNet(nn.Module):
                              "or a 3-element tuple, got {}".format(replace_stride_with_dilation))
         self.groups = groups
         self.base_width = width_per_group
-        self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3,
-                               bias=False)
+        if model_cfg == "hardware":
+            self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=3, stride=2, padding=1, bias=False)
+        else:
+            self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
@@ -62,9 +64,12 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, int(256*width_mult), layers[2], stride=2,
                                        dilate=replace_stride_with_dilation[1], **kwargs)
         self.layer4 = self._make_layer(block, int(512*width_mult), layers[3], stride=2,
-                                       dilate=replace_stride_with_dilation[2], **kwargs)
+                                       dilate=replace_stride_with_dilation[2], model_cfg=model_cfg, **kwargs)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(int(512*width_mult * block.expansion), num_classes)
+        if model_cfg == "hardware":
+            self.fc = nn.Linear(int(512*width_mult * 2), num_classes)
+        else:
+            self.fc = nn.Linear(int(512*width_mult * block.expansion), num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -80,8 +85,10 @@ class ResNet(nn.Module):
                 elif isinstance(m, BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
 
-    def _make_layer(self, block, planes, blocks, stride=1, dilate=False, **kwargs):
+    def _make_layer(self, block, planes, blocks, stride=1, dilate=False, model_cfg="baseline", **kwargs):
         norm_layer = self._norm_layer
+        if model_cfg == "hardware":
+            block.expansion = 2
         downsample = None
         previous_dilation = self.dilation
         if dilate:
