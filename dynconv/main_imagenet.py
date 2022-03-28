@@ -19,6 +19,11 @@ import utils.utils as utils
 import utils.viz as viz
 from torch.backends import cudnn as cudnn
 
+try:
+    from apex import amp
+    mix_precision = True
+except ImportError:
+    mix_precision = False
 cudnn.benchmark = True
 device='cuda'
 
@@ -191,6 +196,9 @@ def main():
         print(f"########## Evaluation ##########")
         prec1, MMac = validate(args, val_loader, model, criterion, start_epoch)
         return
+
+    if mix_precision:
+        model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
         
     ## TRAINING
     best_epoch, best_MMac = start_epoch, -1
@@ -266,7 +274,13 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
         # compute gradient and do SGD step
         optimizer.zero_grad()
         loss = s_loss + t_loss if s_loss else t_loss
-        loss.backward()
+
+        if mix_precision:
+            with amp.scale_loss(loss, self.optimizer) as scaled_loss:
+                scaled_loss.backward()
+        else:
+            loss.backward()
+
         optimizer.step()
 
     if file_path:
