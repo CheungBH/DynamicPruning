@@ -1,6 +1,8 @@
 #-*-coding:utf-8-*-
 
 cmds = [
+
+    "CUDA_VISIBLE_DEVICES=0 python main_imagenet.py --budget -1 -s exp/imagenet_1x1/baseline --no_attention --mask_kernel 1 --batchsize 320 --dataset-root /media/ssd0/imagenet/ --model resnet50",
     # "python main_cifar.py --model resnet32_BN -s exp/diff_mask/r32BN_baseline --budget -1",
     # "python main_cifar.py --model MobileNetV2_32x32 -s exp/diff_mask_mobile/baseline_k1 --mask_kernel 1 --budget -1 --workers 8",
     # "python main_cifar.py --model MobileNetV2_32x32 -s exp/diff_mask_mobile/baseline_NoAtt --mask_kernel 3 --no_attention --budget -1 --workers 8",
