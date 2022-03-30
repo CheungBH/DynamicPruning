@@ -82,7 +82,8 @@ class Bottleneck(nn.Module):
     expansion = 4
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1, base_width=64, dilation=1,
-                 norm_layer=None, sparse=False, resolution_mask=False, mask_block=False, mask_type="conv", **kwargs):
+                 norm_layer=None, sparse=False, resolution_mask=False, mask_block=False, mask_type="conv",
+                 save_feat=False, **kwargs):
         super(Bottleneck, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
@@ -104,6 +105,7 @@ class Bottleneck(nn.Module):
         self.sparse = sparse
         self.resolution_mask = resolution_mask
         self.mask_block = mask_block
+        self.save_feat = save_feat
 
         if sparse:
             if resolution_mask and not self.mask_block:
@@ -136,7 +138,11 @@ class Bottleneck(nn.Module):
 
             out = self.conv3(out)
             out = self.bn3(out)
+            if self.save_feat:
+                meta["feat_before"].append(out)
             out += identity
+            if self.save_feat:
+                meta["feat_after"].append(out)
         else:
             assert meta is not None
             if self.resolution_mask:

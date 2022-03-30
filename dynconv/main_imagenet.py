@@ -53,6 +53,7 @@ def main():
     parser.add_argument('-e', '--evaluate', action='store_true', help='evaluation mode')
     parser.add_argument('--resolution_mask', action='store_true', help='share a mask within a same resolution')
     parser.add_argument('--plot_ponder', action='store_true', help='plot ponder cost')
+    parser.add_argument('--feat_save_dir', default='', help='plot ponder cost')
     parser.add_argument('--plot_save_dir', default='', help='plot ponder cost')
     parser.add_argument('--auto_resume', action='store_true', help='plot ponder cost')
     parser.add_argument('--optim', type=str, default='sgd', help='network model name')
@@ -63,15 +64,19 @@ def main():
 
     res = 224
 
+    if not args.evaluate:
+        args.feat_save_dir = False
+
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                     std=[0.229, 0.224, 0.225])
     net_module = models.__dict__[args.model]
     model = net_module(sparse=args.budget >= 0, model_cfg=args.model_cfg, resolution_mask=args.resolution_mask,
                        mask_type=args.mask_type, momentum=args.momentum, budget=args.budget,
                        mask_kernel=args.mask_kernel, no_attention=args.no_attention,
-                       individual_forward=args.individual_forward).to(device=device)
+                       individual_forward=args.individual_forward, save_feat=args.feat_save_dir).to(device=device)
 
-    meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0}
+    meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0,
+            "feat_before": [], "feat_after": []}
     _ = model(torch.rand((1, 3, res, res)).cuda(), meta)
 
     if not args.evaluate:
@@ -156,7 +161,11 @@ def main():
             else:
                 print(msg)
     elif args.load:
-        checkpoint_dict = torch.load(args.load, map_location=device)['state_dict']
+        try:
+            checkpoint_dict = torch.load(args.load, map_location=device)['state_dict']
+        except:
+            checkpoint_dict = torch.load(args.load, map_location=device)
+
         model_dict = model.state_dict()
         update_dict = {k: v for k, v in model_dict.items() if k in checkpoint_dict.keys()}
         model_dict.update(update_dict)
@@ -314,7 +323,8 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
             target = target.to(device=device, non_blocking=True)
 
             # compute output
-            meta = {'masks': [], 'device': device, 'gumbel_temp': 1.0, 'gumbel_noise': False, 'epoch': epoch}
+            meta = {'masks': [], 'device': device, 'gumbel_temp': 1.0, 'gumbel_noise': False, 'epoch': epoch,
+                    "feat_before": [], "feat_after": []}
             output, meta = model(input, meta)
             output = output.float()
             t_loss, s_loss = criterion(output, target, meta)
