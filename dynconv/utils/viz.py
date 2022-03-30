@@ -12,12 +12,20 @@ std = (0.2023, 0.1994, 0.2010)
 unnormalize = utils.UnNormalize(mean, std)
 
 
-def save_feat(feats, dir, name, prefix):
+def save_feat(feats, dir, name, prefix, stages=(3,4,6,3)):
+    def get_stage(curr_idx):
+        s = 0
+        for i, stage in enumerate(stages):
+            s += stage
+            if curr_idx < s:
+                return i, curr_idx - (s - stage)
+
     os.makedirs(os.path.join(dir, name), exist_ok=True)
     for idx, feat in enumerate(feats):
+        stage, layer = get_stage(idx)
         vutils.save_image(
-            nn.functional.upsample_nearest(torch.sum(feat, 1).unsqueeze(dim=1), scale_factor=8),
-            os.path.join(dir, name, "stage{}_{}_relu.jpg".format(idx, prefix)),
+            nn.functional.upsample_nearest(torch.sum(feat, 1).unsqueeze(dim=1), scale_factor=8*pow(2, (stage-1))),
+            os.path.join(dir, name, "stage_{}_{}_{}_relu.jpg".format(stage, layer, prefix)),
             normalize=True)
 
 
