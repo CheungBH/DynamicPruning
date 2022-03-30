@@ -100,7 +100,7 @@ class IN1K(torch.utils.data.Dataset):
         image = self.loader(osp.join(self.root, self.imgs[idx]))
         if self.transform is not None:
             image = self.transform(image)
-        return (image, self.labels[idx])
+        return (image, self.labels[idx], self.imgs[idx])
 
     def __len__(self):
         return len(self.imgs)

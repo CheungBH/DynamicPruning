@@ -24,7 +24,7 @@ def plot_ponder_cost(masks):
     plt.imshow(ponder_cost, vmin=0, vmax=len(masks))
     plt.colorbar()
 
-def plot_masks(masks):
+def plot_masks(masks, save_path=""):
     ''' plots individual masks as subplots 
     argument masks is a list with masks as returned by the network '''
     nb_mask = len(masks)
@@ -47,13 +47,16 @@ def plot_masks(masks):
         y = j // WIDTH
         f.delaxes(axarr[y,x])
 
-def showKey():
+    plt.savefig(save_path)
+
+def showKey(show=False):
     ''' 
     shows a plot, closable by pressing a key 
     '''
-    plt.draw()
-    plt.pause(1)
-    input("<Hit Enter To Close>")
+    if show:
+        plt.draw()
+        plt.pause(1)
+        input("<Hit Enter To Close>")
     plt.clf()
     plt.cla()
     plt.close('all')

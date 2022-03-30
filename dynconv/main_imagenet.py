@@ -49,6 +49,7 @@ def main():
     parser.add_argument('-e', '--evaluate', action='store_true', help='evaluation mode')
     parser.add_argument('--resolution_mask', action='store_true', help='share a mask within a same resolution')
     parser.add_argument('--plot_ponder', action='store_true', help='plot ponder cost')
+    parser.add_argument('--plot_save_dir', default='', help='plot ponder cost')
     parser.add_argument('--auto_resume', action='store_true', help='plot ponder cost')
     parser.add_argument('--optim', type=str, default='sgd', help='network model name')
     parser.add_argument('--scheduler', type=str, default='step', help='network model name')
@@ -80,6 +81,10 @@ def main():
         ## DATA
         trainset = dataloader.imagenet.IN1K(root=args.dataset_root, split='train', transform=transform_train)
         train_loader = torch.utils.data.DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=args.workers, pin_memory=False)
+    else:
+        if args.plot_save_dir:
+            os.makedirs(args.plot_save_dir, exist_ok=True)
+            args.batchsize = 1
 
     transform_val = transforms.Compose([
         transforms.Resize(int(res / 0.875)),
@@ -89,7 +94,7 @@ def main():
     ])
 
     valset = dataloader.imagenet.IN1K(root=args.dataset_root, split='val', transform=transform_val)
-    val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=False, num_workers=4, pin_memory=False)
+    val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=False, num_workers=0, pin_memory=False)
 
     file_path = os.path.join(args.save_dir, "log.txt")
 
@@ -249,7 +254,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     gumbel_noise = False if epoch > 0.8*args.epochs else True
 
     num_step =  len(train_loader)
-    for input, target in tqdm.tqdm(train_loader, total=num_step, ascii=True, mininterval=5):
+    for input, target, _ in tqdm.tqdm(train_loader, total=num_step, ascii=True, mininterval=5):
 
         input = input.to(device=device, non_blocking=True)
         target = target.to(device=device, non_blocking=True)
@@ -291,7 +296,7 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
 
     num_step = len(val_loader)
     with torch.no_grad():
-        for input, target in tqdm.tqdm(val_loader, total=num_step, ascii=True, mininterval=5):
+        for input, target, img_path in tqdm.tqdm(val_loader, total=num_step, ascii=True, mininterval=5):
             input = input.to(device=device, non_blocking=True)
             target = target.to(device=device, non_blocking=True)
 
@@ -309,8 +314,12 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
 
             if args.plot_ponder:
                 viz.plot_image(input)
-                viz.plot_ponder_cost(meta['masks'])
-                viz.plot_masks(meta['masks'])
+                try:
+                    viz.plot_ponder_cost(meta['masks'])
+                except ValueError:
+                    pass
+                save_path = os.path.join(args.plot_save_dir, img_path[0].split("/")[-1]) if args.plot_save_dir else ""
+                viz.plot_masks(meta['masks'], save_path=save_path)
                 viz.showKey()
 
     print(f'* Epoch {epoch} - Prec@1 {top1.avg:.3f}')
