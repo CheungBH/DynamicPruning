@@ -2,10 +2,24 @@ import math
 import matplotlib.pyplot as plt
 import utils.utils as utils
 import dynconv
+import torch
+import torch.nn as nn
+import os
+from torchvision import utils as vutils
 
 mean = (0.4914, 0.4822, 0.4465)
 std = (0.2023, 0.1994, 0.2010)
 unnormalize = utils.UnNormalize(mean, std)
+
+
+def save_feat(feats, dir, name, prefix):
+    os.makedirs(os.path.join(dir, name), exist_ok=True)
+    for idx, feat in enumerate(feats):
+        vutils.save_image(
+            nn.functional.upsample_nearest(torch.sum(feat, 1).unsqueeze(dim=1), scale_factor=8),
+            os.path.join(dir, name, "stage{}_{}_relu.jpg".format(idx, prefix)),
+            normalize=True)
+
 
 def plot_image(input):
     ''' shows the first image of a 4D pytorch batch '''

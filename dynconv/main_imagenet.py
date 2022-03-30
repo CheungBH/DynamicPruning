@@ -94,6 +94,9 @@ def main():
         if args.plot_save_dir:
             os.makedirs(args.plot_save_dir, exist_ok=True)
             args.batchsize = 1
+        if args.feat_save_dir:
+            os.makedirs(args.feat_save_dir, exist_ok=True)
+            args.batchsize = 1
 
     transform_val = transforms.Compose([
         transforms.Resize(int(res / 0.875)),
@@ -334,6 +337,10 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
             # measure accuracy and record loss
             prec1 = utils.accuracy(output.data, target)[0]
             top1.update(prec1.item(), input.size(0))
+
+            if args.feat_save_dir:
+                viz.save_feat(meta["feat_before"], args.feat_save_dir, img_path[0].split("/")[-1], "before")
+                viz.save_feat(meta["feat_after"], args.feat_save_dir, img_path[0].split("/")[-1], "after")
 
             if args.plot_ponder:
                 viz.plot_image(input)
