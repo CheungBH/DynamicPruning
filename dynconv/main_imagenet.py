@@ -106,7 +106,7 @@ def main():
     ])
 
     valset = dataloader.imagenet.IN1K(root=args.dataset_root, split='val', transform=transform_val)
-    val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=False, num_workers=0, pin_memory=False)
+    val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=False, num_workers=4, pin_memory=False)
 
     file_path = os.path.join(args.save_dir, "log.txt")
 
@@ -170,7 +170,9 @@ def main():
             checkpoint_dict = torch.load(args.load, map_location=device)
 
         model_dict = model.state_dict()
-        update_dict = {k: v for k, v in model_dict.items() if k in checkpoint_dict.keys()}
+        # update_dict = {k: v for k, v in model_dict.items() if k in checkpoint_dict.keys()}
+        update_keys = [k for k, v in model_dict.items() if k in checkpoint_dict.keys()]
+        update_dict = {k: v for k, v in checkpoint_dict.items() if k in update_keys}
         model_dict.update(update_dict)
         model.load_state_dict(model_dict)
     elif args.auto_resume:
