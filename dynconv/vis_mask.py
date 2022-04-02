@@ -1,8 +1,8 @@
 import os
 import cv2
 
-image_path = "/media/hkuit164/Elements1/imagenet/val"
-mask_paths = ["plot/s50"]
+image_path = "/media/hkuit155/NewDisk/imagenet/val"
+mask_paths = ["/media/hkuit155/NewDisk/mask/s50"]
 
 img_names = [name for name in os.listdir(mask_paths[0])]
 

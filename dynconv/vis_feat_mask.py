@@ -8,6 +8,7 @@ from collections import defaultdict
 
 img_folder = "/media/hkuit155/NewDisk/imagenet/val"
 fm_folder = "/media/hkuit155/NewDisk/feat"
+mask_folder = "/media/hkuit155/NewDisk/mask/s50"
 
 
 def padded(image, num, h, w):
@@ -22,7 +23,7 @@ def draw_fm(fm_ls, name):
     h, w, _ = fm_ls[0].shape
     image = np.concatenate(fm_ls[:WIDTH], axis=1)
     column = len(fm_ls) // WIDTH
-    for c in range(column-1):
+    for c in range(column)[1:]:
         tmp_img = np.concatenate(fm_ls[WIDTH*c: WIDTH*(c+1)], axis=1)
         if c+2 == column:
             tmp_img = padded(tmp_img, len(fm_ls)%WIDTH, h, w)
@@ -48,6 +49,9 @@ for i, img_name in enumerate(img_names):
             fm_dict_after.append(cv2.imread(mask_path))
     draw_fm(fm_dict_before, "before")
     draw_fm(fm_dict_after, "after")
+
+    mask_img = cv2.imread(os.path.join(mask_folder, img_name))
+    cv2.imshow("{}".format(mask_folder.split("/")[-1]), mask_img)
 
     cv2.waitKey(0)
 
