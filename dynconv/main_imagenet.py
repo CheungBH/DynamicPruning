@@ -65,7 +65,7 @@ def main():
     res = 224
 
     if not args.evaluate:
-        args.feat_save_dir = False
+        args.feat_save_dir = ""
 
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                     std=[0.229, 0.224, 0.225])
@@ -345,14 +345,17 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
                 viz.save_feat(meta["feat_after"], args.feat_save_dir, img_path[0].split("/")[-1], "after")
 
             if args.plot_ponder:
-                viz.plot_image(input)
-                try:
-                    viz.plot_ponder_cost(meta['masks'])
-                except ValueError:
+                if args.plot_save_dir and os.path.exists(os.path.join(args.plot_save_dir, img_path[0].split("/")[-1])):
                     pass
-                save_path = os.path.join(args.plot_save_dir, img_path[0].split("/")[-1]) if args.plot_save_dir else ""
-                viz.plot_masks(meta['masks'], save_path=save_path)
-                viz.showKey()
+                else:
+                    viz.plot_image(input)
+                    try:
+                        viz.plot_ponder_cost(meta['masks'])
+                    except ValueError:
+                        pass
+                    save_path = os.path.join(args.plot_save_dir, img_path[0].split("/")[-1]) if args.plot_save_dir else ""
+                    viz.plot_masks(meta['masks'], save_path=save_path)
+                    viz.showKey()
 
     print(f'* Epoch {epoch} - Prec@1 {top1.avg:.3f}')
     print(f'* average FLOPS (multiply-accumulates, MACs) per image:  {model.compute_average_flops_cost()[0]/1e6:.6f} MMac')
