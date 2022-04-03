@@ -2,14 +2,14 @@
 import os
 import cv2
 from pycocotools.coco import COCO
-import random
+import shutil
 import numpy as np
 from collections import defaultdict
 
 img_folder = "/media/hkuit155/NewDisk/imagenet/val"
 fm_folder = "/media/hkuit155/NewDisk/feat"
 mask_folder = "/media/hkuit155/NewDisk/mask/s50"
-
+move_dest = "sample"
 
 def padded(image, num, h, w):
     if num == 0:
@@ -29,6 +29,7 @@ def draw_fm(fm_ls, name):
             tmp_img = padded(tmp_img, len(fm_ls)%WIDTH, h, w)
         image = np.concatenate((image, tmp_img), axis=0)
     cv2.imshow(name, cv2.resize(image, (w, h)))
+    return image
 
 
 img_names = [name for name in os.listdir(fm_folder)]
@@ -47,10 +48,17 @@ for i, img_name in enumerate(img_names):
             fm_dict_before.append(cv2.imread(mask_path))
         elif "after" in mask_path:
             fm_dict_after.append(cv2.imread(mask_path))
-    draw_fm(fm_dict_before, "before")
-    draw_fm(fm_dict_after, "after")
+    before_img = draw_fm(fm_dict_before, "before")
+    after_img = draw_fm(fm_dict_after, "after")
 
     mask_img = cv2.imread(os.path.join(mask_folder, img_name))
+    if move_dest:
+        sub_folder = os.path.join(move_dest, img_name.split(".")[0])
+        os.makedirs(sub_folder, exist_ok=True)
+        shutil.copy(os.path.join(mask_folder, img_name), os.path.join(sub_folder, "feature_"+img_name))
+        shutil.copy(image_path, os.path.join(sub_folder, "raw_"+img_name))
+        cv2.imwrite(os.path.join(sub_folder, "before_relu_"+img_name), before_img)
+        cv2.imwrite(os.path.join(sub_folder, "after_relu_" + img_name), before_img)
     cv2.imshow("{}".format(mask_folder.split("/")[-1]), mask_img)
 
     cv2.waitKey(0)
