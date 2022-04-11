@@ -261,7 +261,7 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
 
             if args.plot_ponder:
                 viz.plot_image(input)
-                viz.plot_ponder_cost(meta['masks'])
+                # viz.plot_ponder_cost(meta['masks'])
                 viz.plot_masks(meta['masks'])
                 plt.show()
 

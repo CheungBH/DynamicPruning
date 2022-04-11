@@ -32,7 +32,10 @@ def main():
     parser.add_argument('--lr_decay', default=[30,60,90], nargs='+', help='learning rate decay epochs')
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
     parser.add_argument('--weight_decay', default=1e-4, type=float, help='weight decay')
-    parser.add_argument('--sparse_weight', default=10, type=float, help='weight decay')
+    parser.add_argument('--sparse_weight', default=10, type=float, help='weight of network sparsity')
+    parser.add_argument('--layer_weight', default=10, type=float, help='weight of layer sparsity')
+    parser.add_argument('--sparse_strategy', type=str, default='lower', help='Type of mask')
+    parser.add_argument('--valid_range', type=float, default=0.33, help='Type of mask')
     parser.add_argument('--batchsize', default=64, type=int, help='batch size')
     parser.add_argument('--epochs', default=100, type=int, help='number of epochs')
 
@@ -79,6 +82,30 @@ def main():
             "feat_before": [], "feat_after": []}
     _ = model(torch.rand((1, 3, res, res)).cuda(), meta)
 
+
+    ## CRITERION
+    class Loss(nn.Module):
+        def __init__(self, budget, net_weight, block_weight, **kwargs):
+            super(Loss, self).__init__()
+            self.task_loss = nn.CrossEntropyLoss().to(device=device)
+            self.sparsity_loss = dynconv.SparsityCriterion(args.budget, **kwargs) \
+                if args.budget >= 0 and "stat" not in args.mask_type else None
+            self.budget = budget
+            self.net_weight = net_weight
+            self.block_weight = block_weight
+
+        def forward(self, output, target, meta):
+            task_loss, sparse_loss = self.task_loss(output, target), torch.zeros(1).cuda()
+            logger.add('loss_task', task_loss.item())
+            if self.sparsity_loss is not None:
+                loss_net, loss_block = self.sparsity_loss(meta)
+                sparse_loss = loss_block * self.block_weight + loss_net * self.net_weight
+            return task_loss, sparse_loss
+
+    criterion = Loss(args.budget, net_weight=args.sparse_weight, block_weight=args.layer_weight, num_epochs=args.epochs,
+                     strategy=args.sparse_strategy, valid_range=args.valid_range)
+
+
     if not args.evaluate:
         transform_train = transforms.Compose([
                 transforms.RandomResizedCrop(res),
@@ -110,22 +137,6 @@ def main():
 
     file_path = os.path.join(args.save_dir, "log.txt")
 
-    ## CRITERION
-    class Loss(nn.Module):
-        def __init__(self, budget=1):
-            super(Loss, self).__init__()
-            self.task_loss = nn.CrossEntropyLoss().to(device=device)
-            self.sparsity_loss = dynconv.SparsityCriterion(args.budget, args.epochs) \
-                if args.budget >= 0 and "stat" not in args.mask_type else None
-
-        def forward(self, output, target, meta):
-            task_loss, sparse_loss = self.task_loss(output, target), torch.zeros(1).cuda()
-            logger.add('loss_task', task_loss.item())
-            if self.sparsity_loss is not None:
-                sparse_loss = args.sparse_weight*self.sparsity_loss(meta)
-            return task_loss, sparse_loss
-    
-    criterion = Loss(args.budget)
 
     ## OPTIMIZER
     if args.optim == "sgd":

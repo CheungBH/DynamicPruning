@@ -68,12 +68,14 @@ class InvertedResidual(nn.Module):
 
 class InvertedResidualBlock(nn.Module):
     def __init__(self, inp, oup, stride, expand_ratio, norm_layer=None, sparse=False, resolution_mask=False,
-                 mask_block=False, mask_type="conv", **kwargs):
+                 mask_block=False, mask_type="conv", final_activation="linear", use_downsample=False, **kwargs):
         super(InvertedResidualBlock, self).__init__()
         self.stride = stride
         assert stride in [1, 2]
         self.sparse = sparse
         self.use_res_connect = self.stride == 1 and inp == oup
+        self.use_downsample = use_downsample
+
         self.resolution_mask = resolution_mask
         self.mask_block = mask_block
         if self.sparse and self.use_res_connect:
@@ -106,6 +108,7 @@ class InvertedResidualBlock(nn.Module):
 
         self.conv_pw_2 = nn.Conv2d(hidden_dim, oup, kernel_size=1, stride=1, padding=0, bias=False)
         self.bn2 = norm_layer(oup)
+        self.final_activation = final_activation
 
     def forward_with_mask(self, x):
         if self.squeeze:
@@ -145,10 +148,18 @@ class InvertedResidualBlock(nn.Module):
     def forward(self, inp):
         x, meta = inp
         out = self.forward_basic(inp)
-        if self.use_res_connect:
-            return (x + out[0], out[1])
+        if self.final_activation == "linear":
+            if self.use_res_connect:
+                return (x + out[0], out[1])
+            else:
+                return out
+        elif self.final_activation == "relu":
+            if self.use_res_connect:
+                return self.activation(x + out[0]), out[1]
+            else:
+                return self.activation(out[0]), out[1]
         else:
-            return out
+            raise NotImplementedError
 
 
 class MobileNetV2_32x32(nn.Module):

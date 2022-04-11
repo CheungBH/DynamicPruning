@@ -4,6 +4,29 @@ import torch
 import torch.nn as nn
 
 
+
+class SparseBoundary:
+    def __init__(self, sparse_target, num_epochs, strategy, valid_range=0.33):
+        self.sparsity_target = sparse_target
+        self.num_epochs = num_epochs
+        self.strategy = strategy
+        self.valid_range = valid_range
+        assert self.strategy in ["static", "lower", "higher"]
+
+    def update(self, meta):
+        if self.strategy == "static":
+            return self.sparsity_target, self.sparsity_target
+        else:
+            p = meta['epoch'] / (self.valid_range*self.num_epochs)
+            if self.strategy == "lower":
+                progress = math.cos(min(max(p, 0), 1) * (math.pi / 2)) ** 2
+            elif self.strategy == "higher":
+                progress = math.sin(min(max(p, 0), 1) * (math.pi / 2)) ** 2
+            upper_bound = (1 - progress*(1-self.sparsity_target))
+            lower_bound = progress*self.sparsity_target
+            return upper_bound, lower_bound
+
+
 class SparsityCriterion(nn.Module):
     ''' 
     Defines the sparsity loss, consisting of two parts:
@@ -12,17 +35,14 @@ class SparsityCriterion(nn.Module):
     This loss is annealed.
     '''
 
-    def __init__(self, sparsity_target, num_epochs):
+    def __init__(self, sparsity_target, **kwargs):
         super(SparsityCriterion, self).__init__()
         self.sparsity_target = sparsity_target
-        self.num_epochs = num_epochs
+        self.bound = SparseBoundary(sparsity_target, **kwargs)
 
     def forward(self, meta):
 
-        p = meta['epoch'] / (0.33*self.num_epochs)
-        progress = math.cos(min(max(p, 0), 1) * (math.pi / 2))**2
-        upper_bound = (1 - progress*(1-self.sparsity_target))
-        lower_bound = progress*self.sparsity_target
+        upper_bound, lower_bound = self.bound.update(meta)
 
         loss_block = torch.tensor(.0).to(device=meta['device'])
         cost, total = torch.tensor(.0).to(device=meta['device']), torch.tensor(.0).to(device=meta['device'])
@@ -58,4 +78,4 @@ class SparsityCriterion(nn.Module):
         # logger.add('cost_perc', perc.item())
         # logger.add('loss_sp_block', loss_block.item())
         # logger.add('loss_sp_network', loss_network.item())
-        return loss_network + loss_block
+        return loss_network, loss_block
