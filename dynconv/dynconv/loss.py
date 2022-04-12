@@ -4,18 +4,21 @@ import torch
 import torch.nn as nn
 
 
-
 class SparseBoundary:
-    def __init__(self, sparse_target, num_epochs, strategy, valid_range=0.33):
+    def __init__(self, sparse_target, num_epochs, strategy, valid_range=0.33, static_range=0.1):
         self.sparsity_target = sparse_target
         self.num_epochs = num_epochs
         self.strategy = strategy
         self.valid_range = valid_range
-        assert self.strategy in ["static", "lower", "higher"]
+        self.static_range = static_range
+        assert self.strategy in ["static", "lower", "higher", "static_range"]
 
     def update(self, meta):
         if self.strategy == "static":
             return self.sparsity_target, self.sparsity_target
+        elif self.strategy == "static_range":
+            return min((self.sparsity_target + self.static_range), 1), \
+                   max((self.sparsity_target + self.static_range), 0)
         else:
             p = meta['epoch'] / (self.valid_range*self.num_epochs)
             if self.strategy == "lower":

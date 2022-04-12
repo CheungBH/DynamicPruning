@@ -36,6 +36,7 @@ def main():
     parser.add_argument('--layer_weight', default=10, type=float, help='weight of layer sparsity')
     parser.add_argument('--sparse_strategy', type=str, default='lower', help='Type of mask')
     parser.add_argument('--valid_range', type=float, default=0.33, help='Type of mask')
+    parser.add_argument('--static_range', type=float, default=0.2, help='Type of mask')
     parser.add_argument('--batchsize', default=64, type=int, help='batch size')
     parser.add_argument('--epochs', default=100, type=int, help='number of epochs')
 
@@ -103,7 +104,7 @@ def main():
             return task_loss, sparse_loss
 
     criterion = Loss(args.budget, net_weight=args.sparse_weight, block_weight=args.layer_weight, num_epochs=args.epochs,
-                     strategy=args.sparse_strategy, valid_range=args.valid_range)
+                     strategy=args.sparse_strategy, valid_range=args.valid_range, static_range=args.static_range)
 
 
     if not args.evaluate:
