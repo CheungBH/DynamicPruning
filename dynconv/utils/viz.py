@@ -50,8 +50,8 @@ def plot_masks(masks, save_path=""):
     ''' plots individual masks as subplots 
     argument masks is a list with masks as returned by the network '''
     nb_mask = len(masks)
-    WIDTH = 4
-    HEIGHT = math.ceil(nb_mask / 4)
+    WIDTH = 2
+    HEIGHT = math.ceil(nb_mask / WIDTH)
     f, axarr = plt.subplots(HEIGHT, WIDTH)
 
     for i, mask in enumerate(masks):
