@@ -134,7 +134,7 @@ def main():
     ])
 
     valset = dataloader.imagenet.IN1K(root=args.dataset_root, split='val', transform=transform_val)
-    val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=False, num_workers=4, pin_memory=False)
+    val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=False, num_workers=0, pin_memory=False)
 
     file_path = os.path.join(args.save_dir, "log.txt")
 
@@ -363,10 +363,13 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
                     viz.plot_image(input)
                     try:
                         viz.plot_ponder_cost(meta['masks'])
-                    except ValueError:
+                    except:
                         pass
                     save_path = os.path.join(args.plot_save_dir, img_path[0].split("/")[-1]) if args.plot_save_dir else ""
-                    viz.plot_masks(meta['masks'], save_path=save_path)
+                    if args.resolution_mask:
+                        viz.plot_masks(meta['masks'], save_path=save_path)
+                    else:
+                        viz.plot_masks(meta['masks'], save_path=save_path, WIDTH=4)
                     viz.showKey()
 
     print(f'* Epoch {epoch} - Prec@1 {top1.avg:.3f}')
