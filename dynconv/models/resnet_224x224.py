@@ -111,15 +111,24 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
+    def refresh_layer_id(self, meta):
+        meta["stage_id"] += 1
+        meta["block_id"] = 0
+        return meta
+
     def forward(self, x, meta=None):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
         x = self.maxpool(x)
 
+        meta["stage_id"], meta["block_id"] = 0, 0
         x, meta = self.layer1((x,meta))
+        self.refresh_layer_id(meta)
         x, meta = self.layer2((x,meta))
+        self.refresh_layer_id(meta)
         x, meta = self.layer3((x,meta))
+        self.refresh_layer_id(meta)
         x, meta = self.layer4((x,meta))
 
         x = self.avgpool(x)

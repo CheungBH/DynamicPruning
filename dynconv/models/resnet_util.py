@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from .pretrain_mask import *
 try:
     from torch.hub import load_state_dict_from_url
 except ImportError:
@@ -120,6 +121,17 @@ class Bottleneck(nn.Module):
                     self.masker = dynconv.StatMaskUnitMom(stride=stride, dilate_stride=1, **kwargs)
                 else:
                     raise NotImplementedError
+        else:
+            if mask_type == "none":
+                self.mask = NoneMask()
+            elif mask_type == "zero_ratio":
+                self.mask = ZeroRatioMask(**kwargs)
+            elif mask_type == "sum":
+                self.mask = SumNormalizeMask(**kwargs)
+            elif mask_type == "zero_top":
+                self.mask = ZeroRatioTopMask(**kwargs)
+            else:
+                raise NotImplementedError("Unregistered mask type!")
 
     def forward(self, input):
         x, meta = input
@@ -128,6 +140,8 @@ class Bottleneck(nn.Module):
             identity = self.downsample(x)
 
         if not self.sparse:
+
+            mask = self.mask.process(x, self.conv2.stride[0] != 1,  meta["stage_id"])
             out = self.conv1(x)
             out = self.bn1(out)
             out = self.relu(out)
@@ -138,6 +152,12 @@ class Bottleneck(nn.Module):
 
             out = self.conv3(out)
             out = self.bn3(out)
+            try:
+                out = out * mask
+            except:
+                out * mask.unsqueeze(dim=1)
+            meta["block_id"] += 1
+
             if self.save_feat:
                 meta["feat_before"].append(out)
             out += identity
