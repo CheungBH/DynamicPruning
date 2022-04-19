@@ -43,8 +43,8 @@ class SumNormalizeMask:
         self.min_stage = min_stage
 
     def process(self, feat, stride, curr_block):
-        summed_feat = torch.sum(feat, 1)
-        min_value, max_value = summed_feat.min(), summed_feat.max()
+        summed_feat = torch.sum(feat, 1).view(feat.shape[0], -1)
+        min_value, max_value = torch.min(summed_feat, dim=1)[0], torch.max(summed_feat, dim=1)[0]
         normed_feat = ((summed_feat - min_value) / (max_value - min_value)).unsqueeze(dim=1)
         # normed_feat = nn.functional.normalize(torch.sum(feat, 1)).unsqueeze(dim=1)
         if stride:
