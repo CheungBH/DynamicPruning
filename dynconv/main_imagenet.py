@@ -417,7 +417,7 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
         criterion.tb_writer.add_scalar('valid/SPARSE LOSS-EPOCH', sparse_loss_record.avg, epoch)
         criterion.tb_writer.add_scalar("valid/MMac-EPOCH", model.compute_average_flops_cost()[0]/1e6, epoch)
         for idx, recorder in enumerate(layer_sparsity_records):
-            criterion.tb_writer.add_scalar("train/LAYER {}-EPOCH".format(idx+1), recorder.avg)
+            criterion.tb_writer.add_scalar("valid/LAYER {}-EPOCH".format(idx+1), recorder.avg, epoch)
     return top1.avg, model.compute_average_flops_cost()[0]/1e6
 
 
