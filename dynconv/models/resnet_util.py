@@ -153,7 +153,7 @@ class Bottleneck(nn.Module):
             out = self.conv3(out)
             out = self.bn3(out)
 
-            out * mask.unsqueeze(dim=1)
+            out = out * mask.unsqueeze(dim=1)
             meta["block_id"] += 1
 
             if self.save_feat:
