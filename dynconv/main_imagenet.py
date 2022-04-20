@@ -189,13 +189,12 @@ def main():
                 raise ValueError(msg)
             else:
                 print(msg)
-
     elif args.auto_resume:
         assert args.save_dir, "Please specify the auto resuming folder"
         resume_path = os.path.join(args.save_dir, "checkpoint.pth")
         if os.path.isfile(resume_path):
             print(f"=> loading checkpoint '{resume_path}'")
-            checkpoint = torch.load(args.resume)
+            checkpoint = torch.load(resume_path)
             # print('check', checkpoint)
             start_epoch = checkpoint['epoch']-1
             best_prec1 = checkpoint['best_prec1']
