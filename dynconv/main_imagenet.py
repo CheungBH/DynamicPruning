@@ -189,18 +189,7 @@ def main():
                 raise ValueError(msg)
             else:
                 print(msg)
-    elif args.load:
-        try:
-            checkpoint_dict = torch.load(args.load, map_location=device)['state_dict']
-        except:
-            checkpoint_dict = torch.load(args.load, map_location=device)
 
-        model_dict = model.state_dict()
-        # update_dict = {k: v for k, v in model_dict.items() if k in checkpoint_dict.keys()}
-        update_keys = [k for k, v in model_dict.items() if k in checkpoint_dict.keys()]
-        update_dict = {k: v for k, v in checkpoint_dict.items() if k in update_keys}
-        model_dict.update(update_dict)
-        model.load_state_dict(model_dict)
     elif args.auto_resume:
         assert args.save_dir, "Please specify the auto resuming folder"
         resume_path = os.path.join(args.save_dir, "checkpoint.pth")
@@ -219,6 +208,18 @@ def main():
                 raise ValueError(msg)
             else:
                 print(msg)
+    elif args.load:
+        try:
+            checkpoint_dict = torch.load(args.load, map_location=device)['state_dict']
+        except:
+            checkpoint_dict = torch.load(args.load, map_location=device)
+
+        model_dict = model.state_dict()
+        # update_dict = {k: v for k, v in model_dict.items() if k in checkpoint_dict.keys()}
+        update_keys = [k for k, v in model_dict.items() if k in checkpoint_dict.keys()]
+        update_dict = {k: v for k, v in checkpoint_dict.items() if k in update_keys}
+        model_dict.update(update_dict)
+        model.load_state_dict(model_dict)
 
     if args.scheduler == "step":
         lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
