@@ -8,4 +8,4 @@ data
 *train_log.log
 dynconv/exp
 dynconv/plot
-
+*feature_analysis*

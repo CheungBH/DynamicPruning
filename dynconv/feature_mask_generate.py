@@ -20,5 +20,5 @@ for mask_type in mask_types:
             print(cmd)
             if execute:
                 target_file = os.path.join(target_folder, "{}-{}-min{}.txt".format(mask_type, ratio, stage))
-                os.system(cmd + " > " + target_file)
-
+                if not os.path.exists(target_file):
+                    os.system(cmd + " > " + target_file)

@@ -11,6 +11,7 @@ import torch.nn as nn
 import torch.optim
 import torch.utils.data
 import torchvision.datasets as datasets
+from tensorboardX import SummaryWriter
 import torchvision.transforms as transforms
 import tqdm
 import utils.flopscounter as flopscounter
@@ -70,9 +71,6 @@ def main():
 
     res = 224
 
-    if not args.evaluate:
-        args.feat_save_dir = ""
-
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                     std=[0.229, 0.224, 0.225])
     net_module = models.__dict__[args.model]
@@ -89,7 +87,7 @@ def main():
 
     ## CRITERION
     class Loss(nn.Module):
-        def __init__(self, budget, net_weight, block_weight, **kwargs):
+        def __init__(self, budget, net_weight, block_weight, tensorboard_folder="", **kwargs):
             super(Loss, self).__init__()
             self.task_loss = nn.CrossEntropyLoss().to(device=device)
             self.sparsity_loss = dynconv.SparsityCriterion(args.budget, **kwargs) \
@@ -97,18 +95,22 @@ def main():
             self.budget = budget
             self.net_weight = net_weight
             self.block_weight = block_weight
+            if tensorboard_folder:
+                os.makedirs(tensorboard_folder, exist_ok=True)
+            self.tb_writer = SummaryWriter(tensorboard_folder) if tensorboard_folder else ""
 
-        def forward(self, output, target, meta):
-            task_loss, sparse_loss = self.task_loss(output, target), torch.zeros(1).cuda()
-            logger.add('loss_task', task_loss.item())
+        def forward(self, output, target, meta, phase="train"):
+            task_loss, loss_block, loss_net, layer_percents = self.task_loss(output, target), torch.zeros(1).cuda(), \
+                                                              torch.zeros(1).cuda(), []
             if self.sparsity_loss is not None:
-                loss_net, loss_block = self.sparsity_loss(meta)
-                sparse_loss = loss_block * self.block_weight + loss_net * self.net_weight
-            return task_loss, sparse_loss
+                loss_net, loss_block, layer_percents = self.sparsity_loss(meta)
+            sparse_loss = loss_block * self.block_weight + loss_net * self.net_weight
 
-    criterion = Loss(args.budget, net_weight=args.sparse_weight, block_weight=args.layer_weight, num_epochs=args.epochs,
-                     strategy=args.sparse_strategy, valid_range=args.valid_range, static_range=args.static_range)
-
+            if self.tb_writer:
+                self.tb_writer.add_scalar("{}/task loss".format(phase), task_loss)
+                self.tb_writer.add_scalar("{}/network loss".format(phase), loss_net)
+                self.tb_writer.add_scalar("{}/block loss".format(phase), loss_block)
+            return task_loss, sparse_loss, layer_percents
 
     if not args.evaluate:
         transform_train = transforms.Compose([
@@ -117,11 +119,16 @@ def main():
                 transforms.ToTensor(),
                 normalize,
             ])
-
+        if len(args.save_dir) > 0:
+            if not os.path.exists(os.path.join(args.save_dir)):
+                os.makedirs(os.path.join(args.save_dir))
         ## DATA
         trainset = dataloader.imagenet.IN1K(root=args.dataset_root, split='train', transform=transform_train)
         train_loader = torch.utils.data.DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=args.workers, pin_memory=False)
+        tb_folder = os.path.join(args.save_dir, "tb")
+        args.feat_save_dir = ""
     else:
+        tb_folder = ""
         if args.plot_save_dir:
             os.makedirs(args.plot_save_dir, exist_ok=True)
             args.batchsize = 1
@@ -137,10 +144,12 @@ def main():
     ])
 
     valset = dataloader.imagenet.IN1K(root=args.dataset_root, split='val', transform=transform_val)
-    val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=False, num_workers=0, pin_memory=False)
+    val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=False, num_workers=args.workers, pin_memory=False)
 
     file_path = os.path.join(args.save_dir, "log.txt")
-
+    criterion = Loss(args.budget, net_weight=args.sparse_weight, block_weight=args.layer_weight, num_epochs=args.epochs,
+                     strategy=args.sparse_strategy, valid_range=args.valid_range, static_range=args.static_range,
+                     tensorboard_folder=tb_folder)
 
     ## OPTIMIZER
     if args.optim == "sgd":
@@ -155,12 +164,7 @@ def main():
         raise NotImplementedError
 
     ## CHECKPOINT
-    start_epoch = -1
-    best_prec1 = 0
-
-    if not args.evaluate and len(args.save_dir) > 0:
-        if not os.path.exists(os.path.join(args.save_dir)):
-            os.makedirs(os.path.join(args.save_dir))
+    start_epoch, best_prec1 = -1, 0
 
     if args.resume:
         if os.path.isfile(args.resume):
@@ -272,6 +276,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     top1 = utils.AverageMeter()
     task_loss_record = utils.AverageMeter()
     sparse_loss_record = utils.AverageMeter()
+    layer_sparsity_records = [utils.AverageMeter() for _ in range(16)]
 
     if float(args.lr_decay[0]) > 1:
         if epoch < args.lr_decay[0]:
@@ -298,11 +303,14 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
         # compute output
         meta = {'masks': [], 'device': device, 'gumbel_temp': gumbel_temp, 'gumbel_noise': gumbel_noise, 'epoch': epoch}
         output, meta = model(input, meta)
-        t_loss, s_loss = criterion(output, target, meta)
+        t_loss, s_loss, layer_percents = criterion(output, target, meta)
         prec1 = utils.accuracy(output.data, target)[0]
         top1.update(prec1.item(), input.size(0))
         task_loss_record.update(t_loss.item(), input.size(0))
         sparse_loss_record.update(s_loss.item(), input.size(0))
+
+        for layer_per, recorder in zip(layer_percents, layer_sparsity_records):
+            recorder.update(layer_per.item(), 1)
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -322,6 +330,13 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
             f.write("Train: Epoch {}, Prec@1 {}, task loss {}, sparse loss {}\n".format
                     (epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(sparse_loss_record.avg, 4)))
 
+    if criterion.tb_writer:
+        criterion.tb_writer.add_scalar("train/TASK LOSS-EPOCH", task_loss_record.avg)
+        criterion.tb_writer.add_scalar("train/Prec@1-EPOCH", top1.avg)
+        criterion.tb_writer.add_scalar('train/SPARSE LOSS-EPOCH', sparse_loss_record.avg)
+        for idx, recorder in enumerate(layer_sparsity_records):
+            criterion.tb_writer.add_scalar("train/LAYER {}-EPOCH".format(idx+1), recorder.avg)
+
 
 def validate(args, val_loader, model, criterion, epoch, file_path=None):
     """
@@ -330,6 +345,7 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
     top1 = utils.AverageMeter()
     task_loss_record = utils.AverageMeter()
     sparse_loss_record = utils.AverageMeter()
+    layer_sparsity_records = [utils.AverageMeter() for _ in range(16)]
 
     # switch to evaluate mode
     model = flopscounter.add_flops_counting_methods(model)
@@ -347,7 +363,7 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
                     "feat_before": [], "feat_after": []}
             output, meta = model(input, meta)
             output = output.float()
-            t_loss, s_loss = criterion(output, target, meta)
+            t_loss, s_loss, layer_percents = criterion(output, target, meta, phase="")
             task_loss_record.update(t_loss.item(), input.size(0))
             sparse_loss_record.update(s_loss.item(), input.size(0))
 
@@ -383,7 +399,13 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
             f.write("Validation: Epoch {}, Prec@1 {}, task loss {}, sparse loss {}, ave FLOPS per image: {} MMac\n".
                     format(epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(sparse_loss_record.avg, 4),
                            round(model.compute_average_flops_cost()[0]/1e6), 6))
-
+    if criterion.tb_writer:
+        criterion.tb_writer.add_scalar("valid/TASK LOSS-EPOCH", task_loss_record.avg)
+        criterion.tb_writer.add_scalar("valid/Prec@1-EPOCH", top1.avg)
+        criterion.tb_writer.add_scalar('valid/SPARSE LOSS-EPOCH', sparse_loss_record.avg)
+        criterion.tb_writer.add_scalar("valid/MMac-EPOCH", model.compute_average_flops_cost()[0]/1e6)
+        for idx, recorder in enumerate(layer_sparsity_records):
+            criterion.tb_writer.add_scalar("train/LAYER {}-EPOCH".format(idx+1), recorder.avg)
     return top1.avg, model.compute_average_flops_cost()[0]/1e6
 
 

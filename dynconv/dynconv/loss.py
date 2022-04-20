@@ -46,7 +46,7 @@ class SparsityCriterion(nn.Module):
     def forward(self, meta):
 
         upper_bound, lower_bound = self.bound.update(meta)
-
+        layer_percents = []
         loss_block = torch.tensor(.0).to(device=meta['device'])
         cost, total = torch.tensor(.0).to(device=meta['device']), torch.tensor(.0).to(device=meta['device'])
 
@@ -63,6 +63,8 @@ class SparsityCriterion(nn.Module):
                 layer_perc = c / t
             except RuntimeError:
                 layer_perc = torch.true_divide(c, t)
+
+            layer_percents.append(layer_perc)
             # logger.add('layer_perc_'+str(i), layer_perc.item())
             assert layer_perc >= 0 and layer_perc <= 1, layer_perc
             loss_block += max(0, layer_perc - upper_bound)**2  # upper bound
@@ -76,9 +78,9 @@ class SparsityCriterion(nn.Module):
         loss_block /= len(meta['masks'])
         loss_network = (perc - self.sparsity_target)**2
 
-        logger.add('upper_bound', upper_bound)
+        # logger.add('upper_bound', upper_bound)
         # logger.add('lower_bound', lower_bound)
         # logger.add('cost_perc', perc.item())
         # logger.add('loss_sp_block', loss_block.item())
         # logger.add('loss_sp_network', loss_network.item())
-        return loss_network, loss_block
+        return loss_network, loss_block, layer_percents
