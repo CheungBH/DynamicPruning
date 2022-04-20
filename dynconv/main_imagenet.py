@@ -376,6 +376,8 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
             t_loss, s_loss, layer_percents = criterion(output, target, meta, phase="")
             task_loss_record.update(t_loss.item(), input.size(0))
             sparse_loss_record.update(s_loss.item(), input.size(0))
+            for layer_per, recorder in zip(layer_percents, layer_sparsity_records):
+                recorder.update(layer_per.item(), 1)
 
             # measure accuracy and record loss
             prec1 = utils.accuracy(output.data, target)[0]
