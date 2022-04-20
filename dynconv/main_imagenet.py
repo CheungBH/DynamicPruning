@@ -110,11 +110,11 @@ def main():
                 loss_net, loss_block, layer_percents = self.sparsity_loss(meta)
             sparse_loss = loss_block * self.block_weight + loss_net * self.net_weight
 
-            if self.tb_writer:
+            if self.tb_writer and phase == "train":
                 self.tb_writer.add_scalar("{}/task loss".format(phase), task_loss, iteration)
                 self.tb_writer.add_scalar("{}/network loss".format(phase), loss_net, iteration)
                 self.tb_writer.add_scalar("{}/block loss".format(phase), loss_block, iteration)
-            iteration += 1
+                iteration += 1
             return task_loss, sparse_loss, layer_percents
 
     if not args.evaluate:
