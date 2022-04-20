@@ -11,7 +11,7 @@ class SparseBoundary:
         self.strategy = strategy
         self.valid_range = valid_range
         self.static_range = static_range
-        assert self.strategy in ["static", "lower", "higher", "static_range"]
+        assert self.strategy in ["static", "wider", "narrower", "static_range"]
 
     def update(self, meta):
         if self.strategy == "static":
@@ -21,9 +21,9 @@ class SparseBoundary:
                    max((self.sparsity_target + self.static_range), 0)
         else:
             p = meta['epoch'] / (self.valid_range*self.num_epochs)
-            if self.strategy == "lower":
+            if self.strategy == "wider":
                 progress = math.cos(min(max(p, 0), 1) * (math.pi / 2)) ** 2
-            elif self.strategy == "higher":
+            elif self.strategy == "narrower":
                 progress = math.sin(min(max(p, 0), 1) * (math.pi / 2)) ** 2
             upper_bound = (1 - progress*(1-self.sparsity_target))
             lower_bound = progress*self.sparsity_target
