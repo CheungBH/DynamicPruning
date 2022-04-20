@@ -26,9 +26,11 @@ mix_precision = True
 
 cudnn.benchmark = True
 device='cuda'
+iteration = 0
 
 
 def main():
+    global iteration
     parser = argparse.ArgumentParser(description='PyTorch ImageNet Training with sparse masks')
     parser.add_argument('--lr', default=0.025, type=float, help='learning rate')
     parser.add_argument('--lr_decay', default=[30,60,90], nargs='+', help='learning rate decay epochs')
@@ -167,7 +169,7 @@ def main():
         raise NotImplementedError
 
     ## CHECKPOINT
-    start_epoch, best_prec1, iteration = -1, 0, 0
+    start_epoch, best_prec1 = -1, 0
 
     if args.resume:
         if os.path.isfile(args.resume):
