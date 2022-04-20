@@ -27,6 +27,7 @@ mix_precision = True
 cudnn.benchmark = True
 device='cuda'
 
+
 def main():
     parser = argparse.ArgumentParser(description='PyTorch ImageNet Training with sparse masks')
     parser.add_argument('--lr', default=0.025, type=float, help='learning rate')
@@ -100,6 +101,7 @@ def main():
             self.tb_writer = SummaryWriter(tensorboard_folder) if tensorboard_folder else ""
 
         def forward(self, output, target, meta, phase="train"):
+            global iteration
             task_loss, loss_block, loss_net, layer_percents = self.task_loss(output, target), torch.zeros(1).cuda(), \
                                                               torch.zeros(1).cuda(), []
             if self.sparsity_loss is not None:
@@ -107,9 +109,10 @@ def main():
             sparse_loss = loss_block * self.block_weight + loss_net * self.net_weight
 
             if self.tb_writer:
-                self.tb_writer.add_scalar("{}/task loss".format(phase), task_loss)
-                self.tb_writer.add_scalar("{}/network loss".format(phase), loss_net)
-                self.tb_writer.add_scalar("{}/block loss".format(phase), loss_block)
+                self.tb_writer.add_scalar("{}/task loss".format(phase), task_loss, iteration)
+                self.tb_writer.add_scalar("{}/network loss".format(phase), loss_net, iteration)
+                self.tb_writer.add_scalar("{}/block loss".format(phase), loss_block, iteration)
+            iteration += 1
             return task_loss, sparse_loss, layer_percents
 
     if not args.evaluate:
@@ -164,7 +167,7 @@ def main():
         raise NotImplementedError
 
     ## CHECKPOINT
-    start_epoch, best_prec1 = -1, 0
+    start_epoch, best_prec1, iteration = -1, 0, 0
 
     if args.resume:
         if os.path.isfile(args.resume):
@@ -173,6 +176,10 @@ def main():
             # print('check', checkpoint)
             start_epoch = checkpoint['epoch']-1
             best_prec1 = checkpoint['best_prec1']
+            try:
+                iteration = checkpoint['iteration']
+            except:
+                iteration = args.batchsize * start_epoch
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
             print(f"=> loaded checkpoint '{args.resume}'' (epoch {checkpoint['epoch']}, best prec1 {checkpoint['best_prec1']})")
@@ -260,6 +267,7 @@ def main():
             'optimizer': optimizer.state_dict(),
             'epoch': epoch + 1,
             'best_prec1': best_prec1,
+            "iteration": iteration
         }, folder=args.save_dir, is_best=is_best)
         with open(file_path, "a+") as f:
             print(f" *Currently Best prec1: {best_prec1}\n-------------------------------------------------\n", file=f)
@@ -331,11 +339,11 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
                     (epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(sparse_loss_record.avg, 4)))
 
     if criterion.tb_writer:
-        criterion.tb_writer.add_scalar("train/TASK LOSS-EPOCH", task_loss_record.avg)
-        criterion.tb_writer.add_scalar("train/Prec@1-EPOCH", top1.avg)
-        criterion.tb_writer.add_scalar('train/SPARSE LOSS-EPOCH', sparse_loss_record.avg)
+        criterion.tb_writer.add_scalar("train/TASK LOSS-EPOCH", task_loss_record.avg, epoch)
+        criterion.tb_writer.add_scalar("train/Prec@1-EPOCH", top1.avg, epoch)
+        criterion.tb_writer.add_scalar('train/SPARSE LOSS-EPOCH', sparse_loss_record.avg, epoch)
         for idx, recorder in enumerate(layer_sparsity_records):
-            criterion.tb_writer.add_scalar("train/LAYER {}-EPOCH".format(idx+1), recorder.avg)
+            criterion.tb_writer.add_scalar("train/LAYER {}-EPOCH".format(idx+1), recorder.avg, epoch)
 
 
 def validate(args, val_loader, model, criterion, epoch, file_path=None):
@@ -400,10 +408,10 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
                     format(epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(sparse_loss_record.avg, 4),
                            round(model.compute_average_flops_cost()[0]/1e6), 6))
     if criterion.tb_writer:
-        criterion.tb_writer.add_scalar("valid/TASK LOSS-EPOCH", task_loss_record.avg)
-        criterion.tb_writer.add_scalar("valid/Prec@1-EPOCH", top1.avg)
-        criterion.tb_writer.add_scalar('valid/SPARSE LOSS-EPOCH', sparse_loss_record.avg)
-        criterion.tb_writer.add_scalar("valid/MMac-EPOCH", model.compute_average_flops_cost()[0]/1e6)
+        criterion.tb_writer.add_scalar("valid/TASK LOSS-EPOCH", task_loss_record.avg, epoch)
+        criterion.tb_writer.add_scalar("valid/Prec@1-EPOCH", top1.avg, epoch)
+        criterion.tb_writer.add_scalar('valid/SPARSE LOSS-EPOCH', sparse_loss_record.avg, epoch)
+        criterion.tb_writer.add_scalar("valid/MMac-EPOCH", model.compute_average_flops_cost()[0]/1e6, epoch)
         for idx, recorder in enumerate(layer_sparsity_records):
             criterion.tb_writer.add_scalar("train/LAYER {}-EPOCH".format(idx+1), recorder.avg)
     return top1.avg, model.compute_average_flops_cost()[0]/1e6
