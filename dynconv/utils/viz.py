@@ -46,11 +46,10 @@ def plot_ponder_cost(masks):
     plt.imshow(ponder_cost, vmin=0, vmax=len(masks))
     plt.colorbar()
 
-def plot_masks(masks, save_path=""):
+def plot_masks(masks, save_path="", WIDTH=2):
     ''' plots individual masks as subplots 
     argument masks is a list with masks as returned by the network '''
     nb_mask = len(masks)
-    WIDTH = 2
     HEIGHT = math.ceil(nb_mask / WIDTH)
     f, axarr = plt.subplots(HEIGHT, WIDTH)
 
