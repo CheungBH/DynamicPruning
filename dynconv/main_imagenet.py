@@ -241,6 +241,10 @@ def main():
         # evaluate on validation set
         print(f"########## Evaluation ##########")
         prec1, MMac = validate(args, val_loader, model, criterion, start_epoch)
+        if args.mask_type == "stat_mom":
+            print("The threshold for each layer is {}".format(
+                ",".join([str(round(v.data.squeeze().tolist(), 4)) for k, v in model.named_parameters()
+                          if "threshold" in k])))
         return
 
     if mix_precision:
