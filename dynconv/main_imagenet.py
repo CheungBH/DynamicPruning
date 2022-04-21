@@ -334,11 +334,13 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
 
         optimizer.step()
 
+    layer_str = ",".join([round(recorder.avg, 4) for recorder in layer_sparsity_records])
     if file_path:
         with open(file_path, "a+") as f:
             logger.tick(f)
             f.write("Train: Epoch {}, Prec@1 {}, task loss {}, sparse loss {}\n".format
                     (epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(sparse_loss_record.avg, 4)))
+            f.write("Train Layer Percentage: {}".format(layer_str))
 
     if criterion.tb_writer:
         criterion.tb_writer.add_scalar("train/TASK LOSS-EPOCH", task_loss_record.avg, epoch)
@@ -405,12 +407,15 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
 
     print(f'* Epoch {epoch} - Prec@1 {top1.avg:.3f}')
     print(f'* average FLOPS (multiply-accumulates, MACs) per image:  {model.compute_average_flops_cost()[0]/1e6:.6f} MMac')
+    layer_str = ",".join([round(recorder.avg, 4) for recorder in layer_sparsity_records])
+    print("* Layer Percentage are: {}".format(layer_str))
     model.stop_flops_count()
     if file_path:
         with open(file_path, "a+") as f:
             f.write("Validation: Epoch {}, Prec@1 {}, task loss {}, sparse loss {}, ave FLOPS per image: {} MMac\n".
                     format(epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(sparse_loss_record.avg, 4),
                            round(model.compute_average_flops_cost()[0]/1e6), 6))
+            f.write("Validation Layer percentage: {}".format(layer_str))
     if criterion.tb_writer:
         criterion.tb_writer.add_scalar("valid/TASK LOSS-EPOCH", task_loss_record.avg, epoch)
         criterion.tb_writer.add_scalar("valid/Prec@1-EPOCH", top1.avg, epoch)
