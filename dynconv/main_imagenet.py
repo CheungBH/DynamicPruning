@@ -394,10 +394,7 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
                     pass
                 else:
                     viz.plot_image(input)
-                    try:
-                        viz.plot_ponder_cost(meta['masks'])
-                    except:
-                        pass
+                    # viz.plot_ponder_cost(meta['masks'])
                     save_path = os.path.join(args.plot_save_dir, img_path[0].split("/")[-1]) if args.plot_save_dir else ""
                     if args.resolution_mask:
                         viz.plot_masks(meta['masks'], save_path=save_path)

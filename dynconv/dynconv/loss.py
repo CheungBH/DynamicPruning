@@ -46,13 +46,15 @@ class SparsityCriterion(nn.Module):
     def forward(self, meta):
 
         upper_bound, lower_bound = self.bound.update(meta)
-        layer_percents = []
+        layer_percents, mask_percents = [], []
         loss_block = torch.tensor(.0).to(device=meta['device'])
         cost, total = torch.tensor(.0).to(device=meta['device']), torch.tensor(.0).to(device=meta['device'])
 
         for i, mask in enumerate(meta['masks']):
             m_dil = mask['dilate']
             m = mask['std']
+
+            mask_percents.append(m.hard.sum()/m.hard.numel())
 
             c = m_dil.active_positions * m_dil.flops_per_position + \
                 m.active_positions * m.flops_per_position

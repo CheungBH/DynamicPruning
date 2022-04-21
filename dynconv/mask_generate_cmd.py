@@ -1,10 +1,10 @@
 import os
 
-dataset_root = "/media/hkuit155/NewDisk/imagenet"
-checkpoint_folder = "weights/classification_mask_strategy"
+dataset_root = "/media/hkuit164/Elements1/imagenet"
+checkpoint_folder = "weight"
 conv_kernel = 1
-mask_folder = "/media/hkuit155/NewDisk/research/diff_strategy_mask"
-execute = True
+mask_folder = "feature"
+execute = False
 
 for folder_name in os.listdir(checkpoint_folder):
     if "baseline" in folder_name:
