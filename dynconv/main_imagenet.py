@@ -38,7 +38,7 @@ def main():
     parser.add_argument('--weight_decay', default=1e-4, type=float, help='weight decay')
     parser.add_argument('--sparse_weight', default=10, type=float, help='weight of network sparsity')
     parser.add_argument('--layer_weight', default=10, type=float, help='weight of layer sparsity')
-    parser.add_argument('--sparse_strategy', type=str, default='lower', help='Type of mask')
+    parser.add_argument('--sparse_strategy', type=str, default='static', help='Type of mask')
     parser.add_argument('--valid_range', type=float, default=0.33, help='Type of mask')
     parser.add_argument('--static_range', type=float, default=0.2, help='Type of mask')
     parser.add_argument('--min_stage', default=3, type=int, help='min stage for pretrain mask')
