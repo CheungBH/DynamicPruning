@@ -334,7 +334,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
 
         optimizer.step()
 
-    layer_str = ",".join([round(recorder.avg, 4) for recorder in layer_sparsity_records])
+    layer_str = ",".join([str(round(recorder.avg, 4)) for recorder in layer_sparsity_records])
     if file_path:
         with open(file_path, "a+") as f:
             logger.tick(f)
@@ -407,7 +407,7 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
 
     print(f'* Epoch {epoch} - Prec@1 {top1.avg:.3f}')
     print(f'* average FLOPS (multiply-accumulates, MACs) per image:  {model.compute_average_flops_cost()[0]/1e6:.6f} MMac')
-    layer_str = ",".join([round(recorder.avg, 4) for recorder in layer_sparsity_records])
+    layer_str = ",".join([str(round(recorder.avg, 4)) for recorder in layer_sparsity_records])
     print("* Layer Percentage are: {}".format(layer_str))
     model.stop_flops_count()
     if file_path:
