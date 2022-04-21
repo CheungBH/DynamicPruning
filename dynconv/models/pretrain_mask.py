@@ -3,9 +3,9 @@ import torch.nn as nn
 
 
 class ZeroRatioMask:
-    def __init__(self, mask_thresh, min_stage, **kwargs):
+    def __init__(self, mask_thresh, target_stage, **kwargs):
         self.threshold = mask_thresh
-        self.min_stage = min_stage
+        self.target_stage = target_stage
 
     def process(self, feat, stride, curr_block):
         bs, c, h, w = feat.shape
@@ -13,16 +13,16 @@ class ZeroRatioMask:
         soft_mask = torch.true_divide(zero_mask, c)
         if stride:
             soft_mask = nn.functional.upsample_nearest(soft_mask.unsqueeze(dim=1), size=(int(h/2), int(w/2)))
-        if curr_block < self.min_stage:
+        if curr_block not in self.target_stage:
             return torch.ones_like(soft_mask)
         else:
             return (soft_mask <= self.threshold).int()
 
 
 class ZeroRatioTopMask:
-    def __init__(self, mask_thresh, min_stage, **kwargs):
+    def __init__(self, mask_thresh, target_stage, **kwargs):
         self.threshold = mask_thresh
-        self.min_stage = min_stage
+        self.target_stage = target_stage
 
     def process(self, feat, stride, curr_block):
         bs, c, h, w = feat.shape
@@ -30,7 +30,7 @@ class ZeroRatioTopMask:
         soft_mask = torch.true_divide(zero_mask, c)
         if stride:
             soft_mask = nn.functional.upsample_nearest(soft_mask.unsqueeze(dim=1), size=(int(h/2), int(w/2))).squeeze(dim=1)
-        if curr_block < self.min_stage:
+        if curr_block not in self.target_stage:
             return torch.ones_like(soft_mask)
         else:
             thresh = soft_mask.view(-1).sort()[0][int(soft_mask.numel()*self.threshold)]
@@ -38,9 +38,9 @@ class ZeroRatioTopMask:
 
 
 class SumNormalizeMask:
-    def __init__(self, mask_thresh, min_stage, **kwargs):
+    def __init__(self, mask_thresh, target_stage, **kwargs):
         self.threshold = mask_thresh
-        self.min_stage = min_stage
+        self.target_stage = target_stage
 
     def process(self, feat, stride, curr_block):
         summed_feat = torch.sum(feat, 1).view(feat.shape[0], -1)
@@ -50,7 +50,7 @@ class SumNormalizeMask:
         if stride:
             b, c, h, w = feat.shape
             normed_feat = nn.functional.upsample_nearest(normed_feat, size=(int(h/2), int(w/2)))
-        if curr_block < self.min_stage:
+        if curr_block not in self.target_stage:
             return torch.ones_like(normed_feat)
         else:
             return (normed_feat > self.threshold).int()
@@ -60,7 +60,7 @@ class NoneMask:
     def __init__(self):
         pass
 
-    def process(self, feat, stride, min_stage):
+    def process(self, feat, stride, target_stage):
         bs, c, h, w = feat.shape
         if stride:
             return torch.ones((bs, 1, int(h/2), int(w/2))).cuda()
