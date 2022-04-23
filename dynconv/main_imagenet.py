@@ -42,6 +42,7 @@ def main():
     parser.add_argument('--valid_range', type=float, default=0.33, help='Type of mask')
     parser.add_argument('--static_range', type=float, default=0.2, help='Type of mask')
     parser.add_argument('--target_stage', nargs="+", type=int, help='target stage for pretrain mask')
+    parser.add_argument('--random_mask_stage', nargs="+", type=int, help='target stage for pretrain mask')
     parser.add_argument('--batchsize', default=64, type=int, help='batch size')
     parser.add_argument('--epochs', default=100, type=int, help='number of epochs')
     parser.add_argument('--mask_thresh', default=0.5, type=float, help='The numerical threshold of mask')
@@ -81,7 +82,8 @@ def main():
                        mask_type=args.mask_type, momentum=args.momentum, budget=args.budget,
                        mask_kernel=args.mask_kernel, no_attention=args.no_attention,
                        individual_forward=args.individual_forward, save_feat=args.feat_save_dir,
-                       target_stage=args.target_stage, mask_thresh=args.mask_thresh).to(device=device)
+                       target_stage=args.target_stage, mask_thresh=args.mask_thresh,
+                       random_mask_stage=args.random_mask_stage).to(device=device)
 
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0,
             "feat_before": [], "feat_after": []}

@@ -122,21 +122,28 @@ class MaskUnit(nn.Module):
     Generates the mask and applies the gumbel softmax trick
     '''
 
-    def __init__(self, channels, stride=1, dilate_stride=1, no_attention=False, mask_kernel=3, **kwargs):
+    def __init__(self, channels, stride=1, dilate_stride=1, no_attention=False, mask_kernel=3, random_mask_stage=[-1],
+                 **kwargs):
         super(MaskUnit, self).__init__()
         self.maskconv = Squeeze(channels=channels, stride=stride, mask_kernel=mask_kernel, no_attention=no_attention)
         self.gumbel = Gumbel()
-        self.expandmask = ExpandMask(stride=dilate_stride)
+        self.stride = stride
+        self.random_mask_stage = random_mask_stage
+        if dilate:
+            self.expandmask = ExpandMask(stride=dilate_stride)
 
     def forward(self, x, meta):
-        soft = self.maskconv(x)
+        bs, _, w, h = x.shape
+        if meta["stage_id"] in self.random_mask_stage and not self.training:
+            soft = (torch.rand(bs, 1, int(w/self.stride), int(h/self.stride)).cuda() * 2) - 1
+        else:
+            soft = self.maskconv(x)
         hard = self.gumbel(soft, meta['gumbel_temp'], meta['gumbel_noise'])
         mask = Mask(hard, soft)
 
-        hard_dilate = self.expandmask(mask.hard)
-        mask_dilate = Mask(hard_dilate)
-
         if dilate:
+            hard_dilate = self.expandmask(mask.hard)
+            mask_dilate = Mask(hard_dilate)
             m = {'std': mask, 'dilate': mask_dilate}
         else:
             m = {'std': mask, 'dilate': mask}
