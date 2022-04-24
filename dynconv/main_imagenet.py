@@ -42,7 +42,7 @@ def main():
     parser.add_argument('--valid_range', type=float, default=0.33, help='Type of mask')
     parser.add_argument('--static_range', type=float, default=0.2, help='Type of mask')
     parser.add_argument('--target_stage', nargs="+", type=int, help='target stage for pretrain mask')
-    parser.add_argument('--random_mask_stage', nargs="+", type=int, help='target stage for pretrain mask')
+    parser.add_argument('--random_mask_stage', nargs="+", type=int, default=[-1], help='target stage for pretrain mask')
     parser.add_argument('--batchsize', default=64, type=int, help='batch size')
     parser.add_argument('--epochs', default=100, type=int, help='number of epochs')
     parser.add_argument('--mask_thresh', default=0.5, type=float, help='The numerical threshold of mask')

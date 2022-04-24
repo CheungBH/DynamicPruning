@@ -123,7 +123,7 @@ class MaskUnit(nn.Module):
     '''
 
     def __init__(self, channels, stride=1, dilate_stride=1, no_attention=False, mask_kernel=3, random_mask_stage=[-1],
-                 **kwargs):
+                 budget=0.5, **kwargs):
         super(MaskUnit, self).__init__()
         self.maskconv = Squeeze(channels=channels, stride=stride, mask_kernel=mask_kernel, no_attention=no_attention)
         self.gumbel = Gumbel()
@@ -131,11 +131,12 @@ class MaskUnit(nn.Module):
         self.random_mask_stage = random_mask_stage
         if dilate:
             self.expandmask = ExpandMask(stride=dilate_stride)
+        self.budget = budget
 
     def forward(self, x, meta):
         bs, _, w, h = x.shape
         if meta["stage_id"] in self.random_mask_stage and not self.training:
-            soft = (torch.rand(bs, 1, int(w/self.stride), int(h/self.stride)).cuda() * 2) - 1
+            soft = torch.rand(bs, 1, int(w/self.stride), int(h/self.stride)).cuda() - (1 - self.budget)
         else:
             soft = self.maskconv(x)
         hard = self.gumbel(soft, meta['gumbel_temp'], meta['gumbel_noise'])
