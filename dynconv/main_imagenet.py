@@ -54,6 +54,7 @@ def main():
     parser.add_argument('--mask_kernel', default=3, type=int, help='number of epochs')
     parser.add_argument('--no_attention', action='store_true', help='run without attention')
     parser.add_argument('--individual_forward', action='store_true', help='run without attention')
+    parser.add_argument('--unlimited_lower', action='store_true', help='loss without lower constraints')
 
     parser.add_argument('--budget', default=-1, type=float, help='computational budget (between 0 and 1) (-1 for no sparsity)')
     parser.add_argument('-s', '--save_dir', type=str, default='', help='directory to save model')
@@ -156,7 +157,7 @@ def main():
     file_path = os.path.join(args.save_dir, "log.txt")
     criterion = Loss(args.budget, net_weight=args.sparse_weight, block_weight=args.layer_weight, num_epochs=args.epochs,
                      strategy=args.sparse_strategy, valid_range=args.valid_range, static_range=args.static_range,
-                     tensorboard_folder=tb_folder)
+                     tensorboard_folder=tb_folder, unlimited_lower=args.unlimited_lower)
 
     ## OPTIMIZER
     if args.optim == "sgd":
