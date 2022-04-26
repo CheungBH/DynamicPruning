@@ -6,10 +6,12 @@ import os
 repeats = 3
 pretrain_ratio = {0.75: "weights/classification_modified_resnet50/conv_s75/checkpoint_best.pth",
                   0.25: "weights/classification_modified_resnet50/conv_s25/checkpoint_best.pth"}
-execute = False
-data_root = "/media/hkuit164/Elements1/imagenet"
+execute = True
+data_root = "/media/hkuit155/NewDisk/imagenet"
 stages = [[0,1,2], [0,1,3],[0,2,3],[1,2,3], [0], [1], [2], [3], [0,1,2,3]]
+model_cfg = "hardware"
 bs = 32
+mask_kernel = 1
 target_folder = "random_mask"
 os.makedirs(target_folder, exist_ok=True)
 
@@ -18,10 +20,12 @@ for repeat in range(repeats):
         for stage in stages:
             stage_str = list(map(lambda x:str(x), stage))
             stage_cmd_str, stage_file_str = " ".join(stage_str), ",".join(stage_str)
-            cmd = "python main_imagenet.py --budget {} --model resnet50 --random_mask_stage {} " \
-                  "--dataset-root {} --load {} -e --batchsize {}".\
-                format(ratio, stage_cmd_str, data_root, pretrain, bs)
-            target_file = os.path.join(target_folder, "repeat{}-s{}-target{}.txt".format(repeat, ratio, stage_file_str))
+            cmd = "python main_imagenet.py --budget {} --model resnet50 --random_mask_stage {} --no_attention " \
+                  "--dataset-root {} --load {} -e --batchsize {} --mask_kernel {}".\
+                format(ratio, stage_cmd_str, data_root, pretrain, bs, mask_kernel)
+            if model_cfg:
+                cmd += " --model_cfg {}".format(model_cfg)
+            target_file = os.path.join(target_folder, "FLOPs_loss-repeat{}-s{}-target{}.txt".format(repeat, ratio, stage_file_str))
             print(cmd + " > " + target_file)
             # print(cmd)
             if execute:

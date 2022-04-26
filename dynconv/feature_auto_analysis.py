@@ -1,7 +1,7 @@
 import os
 
-file_folder = "feature_analysis"
-result_file = "feature_analysis.txt"
+file_folder = "random_mask"
+result_file = "random_mask.txt"
 
 def get_acc(file):
     with open(file, "r") as f:
@@ -18,7 +18,7 @@ acc_dict = {file_name.split(".txt")[0]: get_acc(os.path.join(file_folder, file_n
 print(acc_dict)
 
 percents = [0.1, 0.25, 0.4, 0.5, 0.6, 0.75, 0.9]
-targets = ["0,1,2", "0,1,3", "0,2,3", "0", "1,2,3", "1", "2", "-0-1-2-3", "1-2-3", "2-3", "-3"]
+targets = ["0,1,2", "0,1,3", "0,2,3", "0", "1,2,3", "1", "2", "0,1,2,3", "1,2,3", "2,3", "3"]
 
 percents_ls = []
 for percent in percents:
