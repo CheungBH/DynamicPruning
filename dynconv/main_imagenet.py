@@ -347,7 +347,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
             logger.tick(f)
             f.write("Train: Epoch {}, Prec@1 {}, task loss {}, sparse loss {}\n".format
                     (epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(sparse_loss_record.avg, 4)))
-            f.write("Train Layer Percentage: {}".format(layer_str))
+            f.write("Train Layer Percentage: {}\n".format(layer_str))
 
     if criterion.tb_writer:
         criterion.tb_writer.add_scalar("train/TASK LOSS-EPOCH", task_loss_record.avg, epoch)
@@ -419,7 +419,7 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
             f.write("Validation: Epoch {}, Prec@1 {}, task loss {}, sparse loss {}, ave FLOPS per image: {} MMac\n".
                     format(epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(sparse_loss_record.avg, 4),
                            round(model.compute_average_flops_cost()[0]/1e6), 6))
-            f.write("Validation Layer percentage: {}".format(layer_str))
+            f.write("Validation Layer percentage: {}\n".format(layer_str))
     if criterion.tb_writer:
         criterion.tb_writer.add_scalar("valid/TASK LOSS-EPOCH", task_loss_record.avg, epoch)
         criterion.tb_writer.add_scalar("valid/Prec@1-EPOCH", top1.avg, epoch)
