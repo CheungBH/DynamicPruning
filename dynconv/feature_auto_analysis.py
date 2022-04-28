@@ -1,7 +1,8 @@
 import os
 
 file_folder = "random_mask"
-result_file = "random_mask.txt"
+target_group = "FLOPs"
+result_file = "random_mask_{}.txt".format(target_group)
 
 def get_acc(file):
     with open(file, "r") as f:
@@ -13,20 +14,22 @@ def get_acc(file):
     return acc
 
 
-acc_dict = {file_name.split(".txt")[0]: get_acc(os.path.join(file_folder, file_name))
-            for file_name in os.listdir(file_folder)}
+acc_dict = {file_name: get_acc(os.path.join(file_folder, file_name))
+            for file_name in os.listdir(file_folder) if target_group in file_name}
 print(acc_dict)
 
-percents = [0.1, 0.25, 0.4, 0.5, 0.6, 0.75, 0.9]
-targets = ["0,1,2", "0,1,3", "0,2,3", "0", "1,2,3", "1", "2", "0,1,2,3", "1,2,3", "2,3", "3"]
+percents = [0.25, 0.5, 0.75]
+targets = [ "0", "1", "2", "3",  "1,2,3", "0,2,3",  "0,1,3", "0,1,2", "0,1,2,3"]
 
 percents_ls = []
 for percent in percents:
     percent_ls = []
     for target in targets:
+        acc = 0
         for k, v in acc_dict.items():
-            if "target" + target in k and str(percent) in k:
-                percent_ls.append(v)
+            if "target" + target + ".txt" in k and str(percent) in k:
+                acc += float(v)
+        percent_ls.append(str(round(acc/3, 2)))
     percents_ls.append(percent_ls)
 
 print(percents_ls)
