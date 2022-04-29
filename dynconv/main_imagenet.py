@@ -267,6 +267,10 @@ def main():
 
         # evaluate on validation set
         prec1, MMac = validate(args, val_loader, model, criterion, epoch, file_path)
+        if args.mask_type == "stat_mom":
+            print("The threshold for each layer is {}".format(
+                ",".join([str(round(v.data.squeeze().tolist(), 4)) for k, v in model.named_parameters()
+                          if "threshold" in k])))
 
         # remember best prec@1 and save checkpoint
         is_best = prec1 > best_prec1
