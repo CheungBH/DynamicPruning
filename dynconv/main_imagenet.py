@@ -46,6 +46,7 @@ def main():
     parser.add_argument('--batchsize', default=64, type=int, help='batch size')
     parser.add_argument('--epochs', default=100, type=int, help='number of epochs')
     parser.add_argument('--mask_thresh', default=0.5, type=float, help='The numerical threshold of mask')
+    parser.add_argument('--skip_layer_thresh', default=-1, type=float, help='The numerical threshold of mask')
 
     parser.add_argument('--model', type=str, default='resnet101', help='network model name')
     parser.add_argument('--model_cfg', type=str, default='baseline', help='network model name')
@@ -84,7 +85,8 @@ def main():
                        mask_kernel=args.mask_kernel, no_attention=args.no_attention,
                        individual_forward=args.individual_forward, save_feat=args.feat_save_dir,
                        target_stage=args.target_stage, mask_thresh=args.mask_thresh,
-                       random_mask_stage=args.random_mask_stage).to(device=device)
+                       random_mask_stage=args.random_mask_stage, skip_layer_thresh=args.skip_layer_thresh
+                       ).to(device=device)
 
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0,
             "feat_before": [], "feat_after": []}

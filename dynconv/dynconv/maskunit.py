@@ -123,7 +123,7 @@ class MaskUnit(nn.Module):
     '''
 
     def __init__(self, channels, stride=1, dilate_stride=1, no_attention=False, mask_kernel=3, random_mask_stage=[-1],
-                 budget=0.5, **kwargs):
+                 budget=0.5, skip_layer_thresh=-1, **kwargs):
         super(MaskUnit, self).__init__()
         self.maskconv = Squeeze(channels=channels, stride=stride, mask_kernel=mask_kernel, no_attention=no_attention)
         self.gumbel = Gumbel()
@@ -132,6 +132,7 @@ class MaskUnit(nn.Module):
         if dilate:
             self.expandmask = ExpandMask(stride=dilate_stride)
         self.budget = budget
+        self.skip_layer_thresh = skip_layer_thresh + 1e-8
 
     def forward(self, x, meta):
         bs, _, w, h = x.shape
@@ -140,6 +141,7 @@ class MaskUnit(nn.Module):
         else:
             soft = self.maskconv(x)
         hard = self.gumbel(soft, meta['gumbel_temp'], meta['gumbel_noise'])
+        hard = self.skip_whole(hard)
         mask = Mask(hard, soft)
 
         if dilate:
@@ -151,6 +153,12 @@ class MaskUnit(nn.Module):
         meta['masks'].append(m)
         return m
 
+    def skip_whole(self, mask):
+        if self.skip_layer_thresh <= 0:
+            return mask
+        else:
+            percent = torch.true_divide(mask.sum(), mask.numel())
+            return 0.5 * torch.sign(mask - 0.5*(torch.sign(self.skip_layer_thresh - percent)+1) - 1e-8) + 0.5
 
 ## Gumbel
 
