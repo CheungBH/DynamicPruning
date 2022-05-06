@@ -122,27 +122,43 @@ class MaskUnit(nn.Module):
     Generates the mask and applies the gumbel softmax trick
     '''
 
-    def __init__(self, channels, stride=1, dilate_stride=1, no_attention=False, mask_kernel=3, **kwargs):
+    def __init__(self, channels, stride=1, dilate_stride=1, no_attention=False, mask_kernel=3, random_mask_stage=[-1],
+                 budget=0.5, skip_layer_thresh=-1, **kwargs):
         super(MaskUnit, self).__init__()
         self.maskconv = Squeeze(channels=channels, stride=stride, mask_kernel=mask_kernel, no_attention=no_attention)
         self.gumbel = Gumbel()
-        self.expandmask = ExpandMask(stride=dilate_stride)
+        self.stride = stride
+        self.random_mask_stage = random_mask_stage
+        if dilate:
+            self.expandmask = ExpandMask(stride=dilate_stride)
+        self.budget = budget
+        self.skip_layer_thresh = skip_layer_thresh + 1e-8
 
     def forward(self, x, meta):
-        soft = self.maskconv(x)
+        bs, _, w, h = x.shape
+        if meta["stage_id"] in self.random_mask_stage and not self.training:
+            soft = torch.rand(bs, 1, int(w/self.stride), int(h/self.stride)).cuda() - (1 - self.budget)
+        else:
+            soft = self.maskconv(x)
         hard = self.gumbel(soft, meta['gumbel_temp'], meta['gumbel_noise'])
+        hard = self.skip_whole(hard)
         mask = Mask(hard, soft)
 
-        hard_dilate = self.expandmask(mask.hard)
-        mask_dilate = Mask(hard_dilate)
-
         if dilate:
+            hard_dilate = self.expandmask(mask.hard)
+            mask_dilate = Mask(hard_dilate)
             m = {'std': mask, 'dilate': mask_dilate}
         else:
             m = {'std': mask, 'dilate': mask}
         meta['masks'].append(m)
         return m
 
+    def skip_whole(self, mask):
+        if self.skip_layer_thresh <= 0:
+            return mask
+        else:
+            percent = torch.true_divide(mask.sum(), mask.numel())
+            return 0.5 * torch.sign(mask - 0.5*(torch.sign(self.skip_layer_thresh - percent)+1) - 1e-8) + 0.5
 
 ## Gumbel
 

@@ -9,3 +9,8 @@ data
 dynconv/exp
 dynconv/plot
 *feature_analysis*
+dynconv/random_mask/
+dynconv/random_mask_sample/
+dynconv/sample/
+
+

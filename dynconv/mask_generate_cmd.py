@@ -1,13 +1,13 @@
 import os
 
-dataset_root = "/media/hkuit164/Elements1/imagenet"
-checkpoint_folder = "weight"
+dataset_root = "/media/hkuit155/NewDisk/imagenet"
+checkpoint_folder = "weights/classification_mask_strategy"
 conv_kernel = 1
-mask_folder = "feature"
-execute = False
+mask_folder = "/media/hkuit155/NewDisk/research/diff_strategy_mask"
+execute = True
 
 for folder_name in os.listdir(checkpoint_folder):
-    if "baseline" in folder_name:
+    if "s50" in folder_name or "narrower_s25" in folder_name:
         continue
     checkpoint_path = os.path.join(checkpoint_folder, folder_name, "checkpoint_best.pth")
     mask_path = os.path.join(mask_folder, folder_name)

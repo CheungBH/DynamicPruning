@@ -42,9 +42,11 @@ def main():
     parser.add_argument('--valid_range', type=float, default=0.33, help='Type of mask')
     parser.add_argument('--static_range', type=float, default=0.2, help='Type of mask')
     parser.add_argument('--target_stage', nargs="+", type=int, help='target stage for pretrain mask')
+    parser.add_argument('--random_mask_stage', nargs="+", type=int, default=[-1], help='target stage for pretrain mask')
     parser.add_argument('--batchsize', default=64, type=int, help='batch size')
     parser.add_argument('--epochs', default=100, type=int, help='number of epochs')
     parser.add_argument('--mask_thresh', default=0.5, type=float, help='The numerical threshold of mask')
+    parser.add_argument('--skip_layer_thresh', default=-1, type=float, help='The numerical threshold of mask')
 
     parser.add_argument('--model', type=str, default='resnet101', help='network model name')
     parser.add_argument('--model_cfg', type=str, default='baseline', help='network model name')
@@ -53,6 +55,7 @@ def main():
     parser.add_argument('--mask_kernel', default=3, type=int, help='number of epochs')
     parser.add_argument('--no_attention', action='store_true', help='run without attention')
     parser.add_argument('--individual_forward', action='store_true', help='run without attention')
+    parser.add_argument('--unlimited_lower', action='store_true', help='loss without lower constraints')
 
     parser.add_argument('--budget', default=-1, type=float, help='computational budget (between 0 and 1) (-1 for no sparsity)')
     parser.add_argument('-s', '--save_dir', type=str, default='', help='directory to save model')
@@ -81,7 +84,9 @@ def main():
                        mask_type=args.mask_type, momentum=args.momentum, budget=args.budget,
                        mask_kernel=args.mask_kernel, no_attention=args.no_attention,
                        individual_forward=args.individual_forward, save_feat=args.feat_save_dir,
-                       target_stage=args.target_stage, mask_thresh=args.mask_thresh).to(device=device)
+                       target_stage=args.target_stage, mask_thresh=args.mask_thresh,
+                       random_mask_stage=args.random_mask_stage, skip_layer_thresh=args.skip_layer_thresh
+                       ).to(device=device)
 
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0,
             "feat_before": [], "feat_after": []}
@@ -154,7 +159,7 @@ def main():
     file_path = os.path.join(args.save_dir, "log.txt")
     criterion = Loss(args.budget, net_weight=args.sparse_weight, block_weight=args.layer_weight, num_epochs=args.epochs,
                      strategy=args.sparse_strategy, valid_range=args.valid_range, static_range=args.static_range,
-                     tensorboard_folder=tb_folder)
+                     tensorboard_folder=tb_folder, unlimited_lower=args.unlimited_lower)
 
     ## OPTIMIZER
     if args.optim == "sgd":
@@ -262,6 +267,10 @@ def main():
 
         # evaluate on validation set
         prec1, MMac = validate(args, val_loader, model, criterion, epoch, file_path)
+        if args.mask_type == "stat_mom":
+            print("The threshold for each layer is {}".format(
+                ",".join([str(round(v.data.squeeze().tolist(), 4)) for k, v in model.named_parameters()
+                          if "threshold" in k])))
 
         # remember best prec@1 and save checkpoint
         is_best = prec1 > best_prec1
@@ -344,7 +353,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
             logger.tick(f)
             f.write("Train: Epoch {}, Prec@1 {}, task loss {}, sparse loss {}\n".format
                     (epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(sparse_loss_record.avg, 4)))
-            f.write("Train Layer Percentage: {}".format(layer_str))
+            f.write("Train Layer Percentage: {}\n".format(layer_str))
 
     if criterion.tb_writer:
         criterion.tb_writer.add_scalar("train/TASK LOSS-EPOCH", task_loss_record.avg, epoch)
@@ -416,7 +425,7 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
             f.write("Validation: Epoch {}, Prec@1 {}, task loss {}, sparse loss {}, ave FLOPS per image: {} MMac\n".
                     format(epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(sparse_loss_record.avg, 4),
                            round(model.compute_average_flops_cost()[0]/1e6), 6))
-            f.write("Validation Layer percentage: {}".format(layer_str))
+            f.write("Validation Layer percentage: {}\n".format(layer_str))
     if criterion.tb_writer:
         criterion.tb_writer.add_scalar("valid/TASK LOSS-EPOCH", task_loss_record.avg, epoch)
         criterion.tb_writer.add_scalar("valid/Prec@1-EPOCH", top1.avg, epoch)

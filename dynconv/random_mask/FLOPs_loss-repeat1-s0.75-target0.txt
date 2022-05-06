@@ -1,0 +1,25 @@
+Args: Namespace(auto_resume=False, batchsize=32, budget=0.75, dataset_root='/media/hkuit155/NewDisk/imagenet', epochs=100, evaluate=True, feat_save_dir='', individual_forward=False, layer_weight=10, load='weights/classification_modified_resnet50/conv_s75/checkpoint_best.pth', lr=0.025, lr_decay=[30, 60, 90], mask_kernel=1, mask_thresh=0.5, mask_type='conv', model='resnet50', model_cfg='hardware', momentum=0.9, no_attention=True, optim='sgd', plot_ponder=False, plot_save_dir='', random_mask_stage=[0], resolution_mask=False, resume='', save_dir='', scheduler='step', sparse_strategy='static', sparse_weight=10, static_range=0.2, target_stage=None, valid_range=0.33, weight_decay=0.0001, workers=8)
+Model: Resnet 50
+Bottleneck - sparse: True: inp 64, hidden_dim 64, oup 256, stride 1
+Bottleneck - sparse: True: inp 256, hidden_dim 64, oup 256, stride 1
+Bottleneck - sparse: True: inp 256, hidden_dim 64, oup 256, stride 1
+Bottleneck - sparse: True: inp 256, hidden_dim 128, oup 512, stride 2
+Bottleneck - sparse: True: inp 512, hidden_dim 128, oup 512, stride 1
+Bottleneck - sparse: True: inp 512, hidden_dim 128, oup 512, stride 1
+Bottleneck - sparse: True: inp 512, hidden_dim 128, oup 512, stride 1
+Bottleneck - sparse: True: inp 512, hidden_dim 256, oup 1024, stride 2
+Bottleneck - sparse: True: inp 1024, hidden_dim 256, oup 1024, stride 1
+Bottleneck - sparse: True: inp 1024, hidden_dim 256, oup 1024, stride 1
+Bottleneck - sparse: True: inp 1024, hidden_dim 256, oup 1024, stride 1
+Bottleneck - sparse: True: inp 1024, hidden_dim 256, oup 1024, stride 1
+Bottleneck - sparse: True: inp 1024, hidden_dim 256, oup 1024, stride 1
+Bottleneck - sparse: True: inp 1024, hidden_dim 512, oup 1024, stride 2
+Bottleneck - sparse: True: inp 1024, hidden_dim 512, oup 1024, stride 1
+Bottleneck - sparse: True: inp 1024, hidden_dim 512, oup 1024, stride 1
+Dataset: ImageNet
+Imagenet: number of images: 50000
+* Number of trainable parameters: 20858232
+########## Evaluation ##########
+* Epoch 0 - Prec@1 75.706
+* average FLOPS (multiply-accumulates, MACs) per image:  2830.349299 MMac
+* Layer Percentage are: 0.75,0.7501,0.75,0.9998,0.6841,0.6841,0.5031,1.0,0.7443,0.7197,0.6084,0.6094,0.7278,1.0,0.9753,1.0

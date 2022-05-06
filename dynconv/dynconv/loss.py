@@ -38,10 +38,11 @@ class SparsityCriterion(nn.Module):
     This loss is annealed.
     '''
 
-    def __init__(self, sparsity_target, **kwargs):
+    def __init__(self, sparsity_target, unlimited_lower=False, **kwargs):
         super(SparsityCriterion, self).__init__()
         self.sparsity_target = sparsity_target
         self.bound = SparseBoundary(sparsity_target, **kwargs)
+        self.lower_unlimit = unlimited_lower
 
     def forward(self, meta):
 
@@ -70,7 +71,8 @@ class SparsityCriterion(nn.Module):
             # logger.add('layer_perc_'+str(i), layer_perc.item())
             assert layer_perc >= 0 and layer_perc <= 1, layer_perc
             loss_block += max(0, layer_perc - upper_bound)**2  # upper bound
-            loss_block += max(0, lower_bound - layer_perc)**2  # lower bound
+            if not self.lower_unlimit:
+                loss_block += max(0, lower_bound - layer_perc)**2  # lower bound
 
             cost += c
             total += t
