@@ -4,6 +4,7 @@ file_folder = "random_mask"
 target_group = "FLOPs"
 result_file = "random_mask_{}.txt".format(target_group)
 
+
 def get_acc(file):
     with open(file, "r") as f:
         lines = f.readlines()
@@ -21,6 +22,7 @@ print(acc_dict)
 percents = [0.25, 0.5, 0.75]
 targets = [ "0", "1", "2", "3",  "1,2,3", "0,2,3",  "0,1,3", "0,1,2", "0,1,2,3"]
 
+
 percents_ls = []
 for percent in percents:
     percent_ls = []
@@ -30,6 +32,7 @@ for percent in percents:
             if "target" + target + ".txt" in k and str(percent) in k:
                 acc += float(v)
         percent_ls.append(str(round(acc/3, 2)))
+
     percents_ls.append(percent_ls)
 
 print(percents_ls)
@@ -40,7 +43,7 @@ def change_char(char):
 
 
 with open(result_file, "w") as f:
-    f.write(",".join(["Name"] + ["target"+change_char(item) for item in targets]) + "\n")
+    f.write(",".join(["Name"] + [change_char(item) for item in targets]) + "\n")
     # f.write(",".join(list(map(lambda x: x.replace("," "-"), ["Name"] + targets)))+"\n")
     for idx, perc in enumerate(percents_ls):
         f.write(str(percents[idx])+","+",".join(perc)+"\n")

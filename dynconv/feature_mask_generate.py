@@ -2,11 +2,11 @@
 import os
 
 pretrain_path = "weight/resnet50/resnet50-19c8e357.pth"
-ratios = [0.1, 0.25, 0.5, 0.75, 0.9]
+ratios = [0.4, 0.6, 0.1, 0.25, 0.5, 0.75, 0.9]
 mask_types = ["zero_top"]
 execute = True
 data_root = "/media/hkuit164/Elements1/imagenet"
-stages = [[0,1,2], [0,1,3],[0,2,3],[1,2,3], [0], [1], [2]]
+stages = [[0,1], [0,2], [0,3], [1,2], [1,3]]
 bs = 32
 target_folder = "feature_analysis"
 os.makedirs(target_folder, exist_ok=True)
