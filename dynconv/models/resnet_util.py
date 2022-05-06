@@ -130,6 +130,10 @@ class Bottleneck(nn.Module):
                 self.mask = SumNormalizeMask(**kwargs)
             elif mask_type == "zero_top":
                 self.mask = ZeroRatioTopMask(**kwargs)
+            elif mask_type == "random":
+                self.mask = RandomMask(**kwargs)
+            elif mask_type == "abs_sum":
+                self.mask = AbsSumNormalizeMask(**kwargs)
             else:
                 raise NotImplementedError("Unregistered mask type!")
 

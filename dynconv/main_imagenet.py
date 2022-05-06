@@ -85,7 +85,7 @@ def main():
 
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0,
             "feat_before": [], "feat_after": []}
-    _ = model(torch.rand((1, 3, res, res)).cuda(), meta)
+    _ = model(torch.rand((2, 3, res, res)).cuda(), meta)
 
 
     ## CRITERION
