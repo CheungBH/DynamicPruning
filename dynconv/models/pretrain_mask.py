@@ -93,9 +93,9 @@ class RandomMask:
 
     def process(self, feat, stride, curr_block):
         bs, c, h, w = feat.shape
-        rand_mask = torch.rand((bs, 1, h, w)).cuda()
+        rand_mask = torch.rand((bs, h, w)).cuda()
         if stride:
-            rand_mask = nn.functional.upsample_nearest(rand_mask, size=(int(h/2), int(w/2)))
+            rand_mask = nn.functional.upsample_nearest(rand_mask.unsqueeze(1), size=(int(h/2), int(w/2))).squeeze()
         if curr_block not in self.target_stage:
             return torch.ones_like(rand_mask)
         else:
