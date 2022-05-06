@@ -46,12 +46,12 @@ class SumNormalizeMask:
         summed_feat = torch.sum(feat, 1)
         if stride:
             b, c, h, w = feat.shape
-            summed_feat = nn.functional.upsample_nearest(summed_feat, size=(int(h/2), int(w/2)))
+            summed_feat = nn.functional.upsample_nearest(summed_feat.unsqueeze(1), size=(int(h/2), int(w/2))).squeeze()
         thresholds = summed_feat.view(feat.shape[0], -1).sort(dim=1)[0][:, int((summed_feat.shape[-1]*summed_feat.shape[-2]*self.threshold))]
         thresh_masks = thresholds.unsqueeze(dim=1).unsqueeze(dim=1).expand_as(summed_feat)
 
         if curr_block not in self.target_stage:
-            return torch.ones_like(mask)
+            return torch.ones_like(summed_feat)
         else:
             return (summed_feat > thresh_masks).int()
 
@@ -65,12 +65,12 @@ class AbsSumNormalizeMask:
         summed_feat = torch.sum(torch.abs(feat), 1)
         if stride:
             b, c, h, w = feat.shape
-            summed_feat = nn.functional.upsample_nearest(summed_feat, size=(int(h/2), int(w/2)))
+            summed_feat = nn.functional.upsample_nearest(summed_feat.unsqueeze(1), size=(int(h/2), int(w/2))).squeeze()
         thresholds = summed_feat.view(feat.shape[0], -1).sort(dim=1)[0][:, int((summed_feat.shape[-1]*summed_feat.shape[-2]*self.threshold))]
         thresh_masks = thresholds.unsqueeze(dim=1).unsqueeze(dim=1).expand_as(summed_feat)
 
         if curr_block not in self.target_stage:
-            return torch.ones_like(mask)
+            return torch.ones_like(summed_feat)
         else:
             return (summed_feat > thresh_masks).int()
 
