@@ -46,7 +46,7 @@ def main():
     parser.add_argument('--batchsize', default=64, type=int, help='batch size')
     parser.add_argument('--epochs', default=100, type=int, help='number of epochs')
     parser.add_argument('--mask_thresh', default=0.5, type=float, help='The numerical threshold of mask')
-    parser.add_argument('--skip_layer_thresh', default=-1, type=float, help='The numerical threshold of mask')
+    parser.add_argument('--skip_layer_thresh', default=0, type=float, help='The numerical threshold of mask')
     # Negative value for directly skip; Positive for using formula to skip
     parser.add_argument('--model', type=str, default='resnet101', help='network model name')
     parser.add_argument('--model_cfg', type=str, default='baseline', help='network model name')
@@ -54,7 +54,8 @@ def main():
     parser.add_argument('--mask_type', type=str, default='conv', help='Type of mask')
     parser.add_argument('--mask_kernel', default=3, type=int, help='number of epochs')
     parser.add_argument('--no_attention', action='store_true', help='run without attention')
-    parser.add_argument('--individual_forward', action='store_true', help='run without attention')
+    parser.add_argument('--input_resolution', action='store_true', help='The mask resolution is based on the input size')
+    parser.add_argument('--individual_forward', action='store_true', help='for stat mask: Treating each sample individually')
     parser.add_argument('--unlimited_lower', action='store_true', help='loss without lower constraints')
 
     parser.add_argument('--budget', default=-1, type=float, help='computational budget (between 0 and 1) (-1 for no sparsity)')
@@ -85,8 +86,8 @@ def main():
                        mask_kernel=args.mask_kernel, no_attention=args.no_attention,
                        individual_forward=args.individual_forward, save_feat=args.feat_save_dir,
                        target_stage=args.target_stage, mask_thresh=args.mask_thresh,
-                       random_mask_stage=args.random_mask_stage, skip_layer_thresh=args.skip_layer_thresh
-                       ).to(device=device)
+                       random_mask_stage=args.random_mask_stage, skip_layer_thresh=args.skip_layer_thresh,
+                       input_resolution=args.input_resolution).to(device=device)
 
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0,
             "feat_before": [], "feat_after": []}

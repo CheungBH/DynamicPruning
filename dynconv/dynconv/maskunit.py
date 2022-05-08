@@ -152,7 +152,7 @@ class MaskUnit(nn.Module):
             mask_dilate = Mask(hard_dilate)
             m = {'std': mask, 'dilate': mask_dilate}
         else:
-            if self.input_res:
+            if self.input_res and meta["stride"] == 2:
                 m = {'std': Mask(self.maxpool(hard)), 'dilate': mask}
             else:
                 m = {'std': mask, 'dilate': mask}
@@ -191,8 +191,8 @@ class Gumbel(nn.Module):
         if not self.training:  # no Gumbel noise during inference
             return (x >= 0).float()
 
-        logger.add('gumbel_noise', gumbel_noise)
-        logger.add('gumbel_temp', gumbel_temp)
+        # logger.add('gumbel_noise', gumbel_noise)
+        # logger.add('gumbel_temp', gumbel_temp)
 
         if gumbel_noise:
             eps = self.eps
