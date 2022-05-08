@@ -116,6 +116,7 @@ class Bottleneck(nn.Module):
                     # in the resnet basic block, the first convolution is already strided, so mask_stride = 1
                     self.masker = dynconv.MaskUnit(channels=inplanes, stride=stride, dilate_stride=1, **kwargs)
                 elif mask_type == "stat":
+                    raise NotImplementedError
                     self.masker = dynconv.StatMaskUnit(stride=stride, dilate_stride=1)
                 elif mask_type == "stat_mom":
                     self.masker = dynconv.StatMaskUnitMom(stride=stride, dilate_stride=1, **kwargs)
@@ -168,10 +169,7 @@ class Bottleneck(nn.Module):
         else:
             assert meta is not None
             if self.resolution_mask:
-                if self.mask_block:
-                    m = self.masker(x, meta)
-                else:
-                    m = meta["masks"][-1]
+                m = self.masker(x, meta) if self.mask_block else meta["masks"][-1]
             else:
                 m = self.masker(x, meta)
             mask_dilate, mask = m['dilate'], m['std']

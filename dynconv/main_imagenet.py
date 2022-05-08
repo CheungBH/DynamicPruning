@@ -1,6 +1,6 @@
 import argparse
 import os.path
-
+import sys
 import matplotlib.pyplot as plt
 
 import dataloader.imagenet
@@ -157,6 +157,10 @@ def main():
     val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=False, num_workers=args.workers, pin_memory=False)
 
     file_path = os.path.join(args.save_dir, "log.txt")
+    cmd = utils.generate_cmd(sys.argv[1:])
+    if os.path.exists(file_path):
+        with open(file_path, "w") as f:
+            f.write(cmd)
     criterion = Loss(args.budget, net_weight=args.sparse_weight, block_weight=args.layer_weight, num_epochs=args.epochs,
                      strategy=args.sparse_strategy, valid_range=args.valid_range, static_range=args.static_range,
                      tensorboard_folder=tb_folder, unlimited_lower=args.unlimited_lower)

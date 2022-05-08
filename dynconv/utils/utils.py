@@ -75,3 +75,11 @@ class UnNormalize(object):
         """
         assert tensor.shape[0] == 3
         return self.unnormalize(tensor)
+
+
+def generate_cmd(ls):
+    string = ""
+    for idx, item in enumerate(ls):
+        string += item
+        string += " "
+    return string[:-1] + "\n"
