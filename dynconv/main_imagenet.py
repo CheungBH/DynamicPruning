@@ -47,7 +47,7 @@ def main():
     parser.add_argument('--epochs', default=100, type=int, help='number of epochs')
     parser.add_argument('--mask_thresh', default=0.5, type=float, help='The numerical threshold of mask')
     parser.add_argument('--skip_layer_thresh', default=-1, type=float, help='The numerical threshold of mask')
-
+    # Negative value for directly skip; Positive for using formula to skip
     parser.add_argument('--model', type=str, default='resnet101', help='network model name')
     parser.add_argument('--model_cfg', type=str, default='baseline', help='network model name')
     parser.add_argument('--load', type=str, default='', help='load model path')

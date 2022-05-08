@@ -154,7 +154,17 @@ class MaskUnit(nn.Module):
         return m
 
     def skip_whole(self, mask):
-        if self.skip_layer_thresh <= 0:
+        if self.skip_layer_thresh == 0:
+            return mask
+        elif self.skip_layer_thresh < 0:
+            # percent = torch.true_divide(mask.sum(), mask.numel())
+            # if percent > abs(self.skip_layer_thresh):
+            #     return mask
+            # else:
+            percents = mask.view(mask.shape[0], -1).sum(1)/torch.numel(mask[0])
+            for idx, percent in enumerate(percents):
+                if percent < abs(self.skip_layer_thresh):
+                    mask[idx] = torch.zeros_like(mask[0])
             return mask
         else:
             percent = torch.true_divide(mask.sum(), mask.numel())
