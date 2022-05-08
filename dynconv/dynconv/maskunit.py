@@ -123,7 +123,7 @@ class MaskUnit(nn.Module):
     '''
 
     def __init__(self, channels, stride=1, dilate_stride=1, no_attention=False, mask_kernel=3, random_mask_stage=[-1],
-                 budget=0.5, skip_layer_thresh=-1, **kwargs):
+                 input_resolution=False, budget=0.5, skip_layer_thresh=-1, **kwargs):
         super(MaskUnit, self).__init__()
         self.maskconv = Squeeze(channels=channels, stride=stride, mask_kernel=mask_kernel, no_attention=no_attention)
         self.gumbel = Gumbel()
@@ -133,6 +133,9 @@ class MaskUnit(nn.Module):
             self.expandmask = ExpandMask(stride=dilate_stride)
         self.budget = budget
         self.skip_layer_thresh = skip_layer_thresh + 1e-8
+        self.input_res = input_resolution
+        if self.input_res:
+            self.maxpool = nn.MaxPool2d(kernel_size=2)
 
     def forward(self, x, meta):
         bs, _, w, h = x.shape
@@ -149,7 +152,10 @@ class MaskUnit(nn.Module):
             mask_dilate = Mask(hard_dilate)
             m = {'std': mask, 'dilate': mask_dilate}
         else:
-            m = {'std': mask, 'dilate': mask}
+            if self.input_res:
+                m = {'std': Mask(self.maxpool(hard)), 'dilate': mask}
+            else:
+                m = {'std': mask, 'dilate': mask}
         meta['masks'].append(m)
         return m
 

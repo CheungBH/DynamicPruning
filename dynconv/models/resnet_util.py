@@ -107,6 +107,7 @@ class Bottleneck(nn.Module):
         self.resolution_mask = resolution_mask
         self.mask_block = mask_block
         self.save_feat = save_feat
+        self.mask_type = mask_type
 
         if sparse:
             if resolution_mask and not self.mask_block:
@@ -116,7 +117,8 @@ class Bottleneck(nn.Module):
                     # in the resnet basic block, the first convolution is already strided, so mask_stride = 1
                     self.masker = dynconv.MaskUnit(channels=inplanes, stride=stride, dilate_stride=1, **kwargs)
                 elif mask_type == "conv_input":
-                    self.masker = dynconv.MaskUnit(channels=inplanes, stride=1, dilate_stride=1, **kwargs)
+                    self.masker = dynconv.MaskUnit(channels=inplanes, stride=1, dilate_stride=1, input_resolution=True,
+                                                   **kwargs)
                 elif mask_type == "stat":
                     raise NotImplementedError
                     self.masker = dynconv.StatMaskUnit(stride=stride, dilate_stride=1)
@@ -181,6 +183,7 @@ class Bottleneck(nn.Module):
 
             x = dynconv.conv1x1(self.conv1, x, mask_dilate)
             x = dynconv.bn_relu(self.bn1, self.relu, x, mask_dilate)
+            x = self.forward_stride_mask(x, mask_dilate)
             x = dynconv.conv3x3(self.conv2, x, mask_dilate, mask)
             x = dynconv.bn_relu(self.bn2, self.relu, x, mask)
             x = dynconv.conv1x1(self.conv3, x, mask)
@@ -189,3 +192,6 @@ class Bottleneck(nn.Module):
 
         out = self.relu(out)
         return out, meta
+
+    def forward_stride_mask(self, x, mask):
+        return dynconv.apply_mask(x, mask) if "input" in self.mask_type else x
