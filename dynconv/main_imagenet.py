@@ -51,6 +51,7 @@ def main():
     parser.add_argument('--model', type=str, default='resnet101', help='network model name')
     parser.add_argument('--model_cfg', type=str, default='baseline', help='network model name')
     parser.add_argument('--load', type=str, default='', help='load model path')
+    parser.add_argument('--layer_loss_method', type=str, default='flops', help='Calculation for layer-wise methods')
     parser.add_argument('--mask_type', type=str, default='conv', help='Type of mask')
     parser.add_argument('--mask_kernel', default=3, type=int, help='number of epochs')
     parser.add_argument('--no_attention', action='store_true', help='run without attention')
@@ -164,7 +165,8 @@ def main():
             f.write(cmd)
     criterion = Loss(args.budget, net_weight=args.sparse_weight, block_weight=args.layer_weight, num_epochs=args.epochs,
                      strategy=args.sparse_strategy, valid_range=args.valid_range, static_range=args.static_range,
-                     tensorboard_folder=tb_folder, unlimited_lower=args.unlimited_lower)
+                     tensorboard_folder=tb_folder, unlimited_lower=args.unlimited_lower,
+                     layer_loss_method=args.layer_loss_method)
 
     ## OPTIMIZER
     if args.optim == "sgd":
