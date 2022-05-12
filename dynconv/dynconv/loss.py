@@ -46,9 +46,9 @@ class SparsityCriterion(nn.Module):
         self.layer_loss_method = layer_loss_method
 
     def calculate_layer_ratio(self, m_dil, m):
+        c = m_dil.active_positions * m_dil.flops_per_position + m.active_positions * m.flops_per_position
+        t = m_dil.total_positions * m_dil.flops_per_position + m.total_positions * m.flops_per_position
         if self.layer_loss_method == "flops":
-            c = m_dil.active_positions * m_dil.flops_per_position + m.active_positions * m.flops_per_position
-            t = m_dil.total_positions * m_dil.flops_per_position + m.total_positions * m.flops_per_position
             try:
                 layer_perc = c / t
             except RuntimeError:
@@ -59,7 +59,7 @@ class SparsityCriterion(nn.Module):
             layer_perc = m_dil.hard.sum()/m_dil.hard.numel()
         else:
             raise NotImplementedError(self.layer_loss_method)
-        return layer_perc
+        return layer_perc, c, t
 
     def forward(self, meta):
         upper_bound, lower_bound = self.bound.update(meta)
@@ -80,7 +80,7 @@ class SparsityCriterion(nn.Module):
             #     layer_perc = c / t
             # except RuntimeError:
             #     layer_perc = torch.true_divide(c, t)
-            layer_perc = self.calculate_layer_ratio(m_dil, m)
+            layer_perc, c, t = self.calculate_layer_ratio(m_dil, m)
 
             layer_percents.append(layer_perc)
             # logger.add('layer_perc_'+str(i), layer_perc.item())
