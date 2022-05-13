@@ -163,6 +163,19 @@ class Bottleneck(nn.Module):
         out = self.bn3(out)
         return out, conv1_mask
 
+    def obtain_mask(self, x, meta):
+        if self.resolution_mask:
+            if self.mask_block:
+                m = self.masker(x, meta)
+            else:
+                if self.input_resolution:
+                    m = {"dilate": meta["masks"][-1]["std"], "std": meta["masks"][-1]["std"]}
+                else:
+                    m = meta["masks"][-1]
+        else:
+            m = self.masker(x, meta)
+        return m
+
     def forward(self, input):
         x, meta = input
         identity = x
@@ -187,10 +200,7 @@ class Bottleneck(nn.Module):
         else:
             assert meta is not None
             meta["stride"] = self.stride
-            if self.resolution_mask:
-                m = self.masker(x, meta) if self.mask_block else meta["masks"][-1]
-            else:
-                m = self.masker(x, meta)
+            m = self.obtain_mask(x, meta)
             mask_dilate, mask = m['dilate'], m['std']
 
             x = dynconv.conv1x1(self.conv1, x, mask_dilate)
