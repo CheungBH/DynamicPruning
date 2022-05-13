@@ -38,34 +38,49 @@ class SparsityCriterion(nn.Module):
     This loss is annealed.
     '''
 
-    def __init__(self, sparsity_target, unlimited_lower=False, **kwargs):
+    def __init__(self, sparsity_target, unlimited_lower=False, layer_loss_method="flops", **kwargs):
         super(SparsityCriterion, self).__init__()
         self.sparsity_target = sparsity_target
         self.bound = SparseBoundary(sparsity_target, **kwargs)
         self.lower_unlimited = unlimited_lower
+        self.layer_loss_method = layer_loss_method
+
+    def calculate_layer_ratio(self, m_dil, m):
+        c = m_dil.active_positions * m_dil.flops_per_position + m.active_positions * m.flops_per_position
+        t = m_dil.total_positions * m_dil.flops_per_position + m.total_positions * m.flops_per_position
+        if self.layer_loss_method == "flops":
+            try:
+                layer_perc = c / t
+            except RuntimeError:
+                layer_perc = torch.true_divide(c, t)
+        elif self.layer_loss_method == "later_mask":
+            layer_perc = m.hard.sum()/m.hard.numel()
+        elif self.layer_loss_method == "front_mask":
+            layer_perc = m_dil.hard.sum()/m_dil.hard.numel()
+        else:
+            raise NotImplementedError(self.layer_loss_method)
+        return layer_perc, c, t
 
     def forward(self, meta):
-
         upper_bound, lower_bound = self.bound.update(meta)
         layer_percents, mask_percents = [], []
         loss_block = torch.tensor(.0).to(device=meta['device'])
         cost, total = torch.tensor(.0).to(device=meta['device']), torch.tensor(.0).to(device=meta['device'])
 
         for i, mask in enumerate(meta['masks']):
-            m_dil = mask['dilate']
-            m = mask['std']
-
+            m_dil, m = mask['dilate'], mask['std']
             mask_percents.append(m.hard.sum()/m.hard.numel())
 
-            c = m_dil.active_positions * m_dil.flops_per_position + \
-                m.active_positions * m.flops_per_position
-            t = m_dil.total_positions * m_dil.flops_per_position + \
-                m.total_positions * m.flops_per_position
-
-            try:
-                layer_perc = c / t
-            except RuntimeError:
-                layer_perc = torch.true_divide(c, t)
+            # c = m_dil.active_positions * m_dil.flops_per_position + \
+            #     m.active_positions * m.flops_per_position
+            # t = m_dil.total_positions * m_dil.flops_per_position + \
+            #     m.total_positions * m.flops_per_position
+            #
+            # try:
+            #     layer_perc = c / t
+            # except RuntimeError:
+            #     layer_perc = torch.true_divide(c, t)
+            layer_perc, c, t = self.calculate_layer_ratio(m_dil, m)
 
             layer_percents.append(layer_perc)
             # logger.add('layer_perc_'+str(i), layer_perc.item())
