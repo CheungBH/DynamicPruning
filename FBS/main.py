@@ -7,13 +7,13 @@ import torch.nn as nn
 
 from dataset import get_loader
 from cifar10_model import CifarNet
-import utils
+import model_utils
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
     '--fbs',
-    type=utils.str2bool,
+    type=model_utils.str2bool,
     default=False
 )
 parser.add_argument(
@@ -72,7 +72,7 @@ os.makedirs(args.ckpt_path, exist_ok=True)
 with open(f'{args.ckpt_path}/train_log_{args.fbs}_{args.sparsity_ratio}.tsv', 'w') as log_file:
     log_file.write(
         'epoch\ttrain_loss\ttest_loss\ttrain_acc\ttest_acc\tbest_acc\n')
-utils.set_seed(args.seed)
+model_utils.set_seed(args.seed)
 
 train_loader, test_loader = get_loader(args.batch_size, args.num_worker)
 model = CifarNet(fbs=args.fbs, sparsity_ratio=args.sparsity_ratio).cuda()

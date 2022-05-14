@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utils import global_avgpool2d, winner_take_all
+from model_utils import global_avgpool2d, winner_take_all
 
 
 class FBSConv2d(nn.Module):

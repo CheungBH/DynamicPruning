@@ -5,14 +5,14 @@ import torch
 
 from dataset import get_loader
 from cifar10_model import CifarNet
-import utils
+import model_utils
 
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
     '--fbs',
-    type=utils.str2bool,
+    type=model_utils.str2bool,
     default=False
 )
 parser.add_argument(
