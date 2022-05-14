@@ -14,10 +14,10 @@ import torchvision.datasets as datasets
 from tensorboardX import SummaryWriter
 import torchvision.transforms as transforms
 import tqdm
-import model_utils.flopscounter as flopscounter
-import model_utils.logger as logger
-import model_utils.utils as utils
-import model_utils.viz as viz
+import utils.flopscounter as flopscounter
+import utils.logger as logger
+import utils.utils as utils
+import utils.viz as viz
 from torch.backends import cudnn as cudnn
 
 from apex import amp
