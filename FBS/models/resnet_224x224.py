@@ -123,6 +123,7 @@ class ResNet(nn.Module):
         x = self.maxpool(x)
 
         meta["stage_id"], meta["block_id"] = 0, 0
+        meta["masked_feat"] = x
         x, meta = self.layer1((x,meta))
         self.refresh_layer_id(meta)
         x, meta = self.layer2((x,meta))

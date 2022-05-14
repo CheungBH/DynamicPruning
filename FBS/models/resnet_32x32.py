@@ -4,7 +4,7 @@ ResNet for 32 by 32 images (CIFAR)
 
 import math
 
-import dynconv
+# import dynconv
 import torch
 import torch.autograd as autograd
 import torch.nn as nn
