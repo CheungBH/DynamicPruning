@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 
 from dataset import get_loader
-from model import CifarNet
+from cifar10_model import CifarNet
 import utils
 
 parser = argparse.ArgumentParser()

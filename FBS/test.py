@@ -4,7 +4,7 @@ from tqdm import tqdm
 import torch
 
 from dataset import get_loader
-from model import CifarNet
+from cifar10_model import CifarNet
 import utils
 
 
