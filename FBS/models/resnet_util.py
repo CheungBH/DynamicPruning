@@ -195,7 +195,7 @@ class Bottleneck(nn.Module):
             # meta["stride"] = self.stride
             vector = self.obtain_vector(meta)
             meta["lasso_sum"] += torch.mean(torch.sum(vector, dim=-1))
-            vector_mask = winner_take_all(vector, self.budget)
+            vector_mask = winner_take_all(vector.clone(), self.budget)
             out = self.conv1(x)
             out = self.bn1(out)
             out = self.relu(out)
