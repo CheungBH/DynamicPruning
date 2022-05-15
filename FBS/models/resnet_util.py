@@ -194,7 +194,7 @@ class Bottleneck(nn.Module):
             assert meta is not None
             # meta["stride"] = self.stride
             vector = self.obtain_vector(meta)
-            meta["vectors"].append(vector)
+            meta["lasso_sum"] += torch.mean(torch.sum(vector, dim=-1))
             vector_mask = winner_take_all(vector, self.budget)
             out = self.conv1(x)
             out = self.bn1(out)

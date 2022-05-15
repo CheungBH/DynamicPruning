@@ -61,6 +61,7 @@ def main():
                         help='for stat mask: Treating each sample individually')
     parser.add_argument('--unlimited_lower', action='store_true', help='loss without lower constraints')
 
+    parser.add_argument('--lasso_lambda', type=float, default=1e-8)
     parser.add_argument('--budget', default=-1, type=float,
                         help='computational budget (between 0 and 1) (-1 for no sparsity)')
     parser.add_argument('-s', '--save_dir', type=str, default='', help='directory to save model')
@@ -94,7 +95,7 @@ def main():
                        input_resolution=args.input_resolution).to(device=device)
 
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0,
-            "feat_before": [], "feat_after": [], "vectors": []}
+            "feat_before": [], "feat_after": [], "lasso_sum": 0}
     _ = model(torch.rand((2, 3, res, res)).cuda(), meta)
 
     ## CRITERION
@@ -168,10 +169,11 @@ def main():
     if os.path.exists(file_path):
         with open(file_path, "w") as f:
             f.write(cmd)
-    criterion = Loss(args.budget, net_weight=args.sparse_weight, block_weight=args.layer_weight, num_epochs=args.epochs,
-                     strategy=args.sparse_strategy, valid_range=args.valid_range, static_range=args.static_range,
-                     tensorboard_folder=tb_folder, unlimited_lower=args.unlimited_lower,
-                     layer_loss_method=args.layer_loss_method)
+    # criterion = Loss(args.budget, net_weight=args.sparse_weight, block_weight=args.layer_weight, num_epochs=args.epochs,
+    #                  strategy=args.sparse_strategy, valid_range=args.valid_range, static_range=args.static_range,
+    #                  tensorboard_folder=tb_folder, unlimited_lower=args.unlimited_lower,
+    #                  layer_loss_method=args.layer_loss_method)
+    criterion = nn.CrossEntropyLoss().to(device=device)
 
     ## OPTIMIZER
     if args.optim == "sgd":
@@ -339,20 +341,17 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
 
         # compute output
         meta = {'masks': [], 'device': device, 'gumbel_temp': gumbel_temp, 'gumbel_noise': gumbel_noise, 'epoch': epoch,
-                "vectors": []}
+                "lasso_sum": 0}
         output, meta = model(input, meta)
-        t_loss, s_loss, layer_percents = criterion(output, target, meta)
+        # t_loss, s_loss, layer_percents = criterion(output, target, meta)
+        t_loss = criterion(output, target)
         prec1 = utils.accuracy(output.data, target)[0]
         top1.update(prec1.item(), input.size(0))
         task_loss_record.update(t_loss.item(), input.size(0))
-        sparse_loss_record.update(s_loss.item(), input.size(0))
-
-        for layer_per, recorder in zip(layer_percents, layer_sparsity_records):
-            recorder.update(layer_per.item(), 1)
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
-        loss = s_loss + t_loss if s_loss else t_loss
+        loss = args.lasso_lambda * meta["lasso_sum"] + t_loss
 
         if mix_precision:
             with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -400,16 +399,18 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
 
             # compute output
             meta = {'masks': [], 'device': device, 'gumbel_temp': 1.0, 'gumbel_noise': False, 'epoch': epoch,
-                    "feat_before": [], "feat_after": [], "vectors": []}
+                    "feat_before": [], "feat_after": [], "lasso_sum": 0}
             output, meta = model(input, meta)
             output = output.float()
-            t_loss, s_loss, layer_percents = criterion(output, target, meta, phase="")
+            t_loss = criterion(output, target)
+            # t_loss, s_loss, layer_percents = criterion(output, target, meta, phase="")
             task_loss_record.update(t_loss.item(), input.size(0))
-            sparse_loss_record.update(s_loss.item(), input.size(0))
-            for layer_per, recorder in zip(layer_percents, layer_sparsity_records):
-                recorder.update(layer_per.item(), 1)
+            # sparse_loss_record.update(s_loss.item(), input.size(0))
+            # for layer_per, recorder in zip(layer_percents, layer_sparsity_records):
+            #     recorder.update(layer_per.item(), 1)
 
             # measure accuracy and record loss
+            loss = args.lasso_lambda * meta["lasso_sum"] + t_loss
             prec1 = utils.accuracy(output.data, target)[0]
             top1.update(prec1.item(), input.size(0))
 
