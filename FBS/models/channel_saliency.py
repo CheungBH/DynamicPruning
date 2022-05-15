@@ -1,4 +1,5 @@
 import torch.nn as nn
+import math
 
 
 class ChannelVectorUnit(nn.Module):
@@ -12,9 +13,19 @@ class ChannelVectorUnit(nn.Module):
         nn.init.constant_(self.channel_saliency_predictor.bias, 1.)
 
     def forward(self, x, meta):
-        x = self.pooling(x)
+        x = self.pooling(x).squeeze()
         x = self.channel_saliency_predictor(x)
-        return self.sigmoid(x)
+        x = self.sigmoid(x)
+        return x
+
+
+def winner_take_all(x, sparsity_ratio):
+    if sparsity_ratio < 1.0:
+        k = math.ceil((1-sparsity_ratio) * x.size(-1))
+        inactive_idx = (-x).topk(k-1, 1)[1]
+        return x.scatter_(1, inactive_idx, 0)
+    else:
+        return x
 
 
 def conv1x1(conv_module, x, mask, fast=False):

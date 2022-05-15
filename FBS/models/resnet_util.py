@@ -81,7 +81,7 @@ class Bottleneck(nn.Module):
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1, base_width=64, dilation=1,
                  norm_layer=None, sparse=False, resolution_mask=False, mask_block=False, mask_type="conv",
-                 save_feat=False, input_resolution=False, group_size=64, **kwargs):
+                 save_feat=False, input_resolution=False, group_size=1, budget=-1, **kwargs):
         super(Bottleneck, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
@@ -101,6 +101,7 @@ class Bottleneck(nn.Module):
         self.downsample = downsample
         self.stride = stride
         self.sparse = sparse
+        self.budget = budget
         self.resolution_mask = resolution_mask
         self.mask_block = mask_block
         self.save_feat = save_feat
@@ -114,8 +115,8 @@ class Bottleneck(nn.Module):
             else:
                 if mask_type == "fc":
                     if not input_resolution:
-                        self.saliency = ChannelVectorUnit(in_channels=inplanes, out_channels=planes * self.expansion,
-                                                        group_size=group_size, **kwargs)
+                        self.saliency = ChannelVectorUnit(in_channels=inplanes, out_channels=planes,
+                                                          group_size=group_size, **kwargs)
                     else:
                         raise NotImplementedError
                 else:
@@ -191,17 +192,19 @@ class Bottleneck(nn.Module):
                 meta["feat_after"].append(out)
         else:
             assert meta is not None
-            meta["stride"] = self.stride
+            # meta["stride"] = self.stride
             vector = self.obtain_vector(meta)
+            meta["vectors"].append(vector)
+            vector_mask = winner_take_all(vector, self.budget)
             out = self.conv1(x)
             out = self.bn1(out)
             out = self.relu(out)
-            out = self.channel_process(out, vector)
+            out = self.channel_process(out, vector_mask)
 
             out = self.conv2(out)
             out = self.bn2(out)
             out = self.relu(out)
-            out = self.channel_process(out, vector)
+            out = self.channel_process(out, vector_mask)
 
             out = self.conv3(out)
             out = self.bn3(out)
@@ -212,7 +215,10 @@ class Bottleneck(nn.Module):
         return out, meta
 
     def channel_process(self, x, vector):
-        return x * vector
+        if len(vector.shape) != 2:
+            return x * vector
+        else:
+            return x * vector.unsqueeze(-1).unsqueeze(-1).expand_as(x)
 
     def get_masked_feature(self, x, mask=None):
         if mask is None:

@@ -94,7 +94,7 @@ def main():
                        input_resolution=args.input_resolution).to(device=device)
 
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0,
-            "feat_before": [], "feat_after": []}
+            "feat_before": [], "feat_after": [], "vectors": []}
     _ = model(torch.rand((2, 3, res, res)).cuda(), meta)
 
     ## CRITERION
@@ -338,7 +338,8 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
         target = target.to(device=device, non_blocking=True)
 
         # compute output
-        meta = {'masks': [], 'device': device, 'gumbel_temp': gumbel_temp, 'gumbel_noise': gumbel_noise, 'epoch': epoch}
+        meta = {'masks': [], 'device': device, 'gumbel_temp': gumbel_temp, 'gumbel_noise': gumbel_noise, 'epoch': epoch,
+                "vectors": []}
         output, meta = model(input, meta)
         t_loss, s_loss, layer_percents = criterion(output, target, meta)
         prec1 = utils.accuracy(output.data, target)[0]
@@ -399,7 +400,7 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
 
             # compute output
             meta = {'masks': [], 'device': device, 'gumbel_temp': 1.0, 'gumbel_noise': False, 'epoch': epoch,
-                    "feat_before": [], "feat_after": []}
+                    "feat_before": [], "feat_after": [], "vectors": []}
             output, meta = model(input, meta)
             output = output.float()
             t_loss, s_loss, layer_percents = criterion(output, target, meta, phase="")
