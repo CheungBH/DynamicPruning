@@ -5,8 +5,9 @@ import math
 class ChannelVectorUnit(nn.Module):
     def __init__(self, in_channels, out_channels, group_size=1, pooling_method="ave", **kwargs):
         super(ChannelVectorUnit, self).__init__()
-        self.pooling = nn.MaxPool2d(1) if pooling_method == "max" else nn.AdaptiveAvgPool2d(1)
+        self.pooling = nn.AdaptiveMaxPool2d(1) if pooling_method == "max" else nn.AdaptiveAvgPool2d(1)
         self.group_size = group_size
+        assert out_channels % group_size == 0, "The channels are not grouped with the same size"
         self.sigmoid = nn.Sigmoid()
         self.channel_saliency_predictor = nn.Linear(in_channels, out_channels//group_size)
         nn.init.kaiming_normal_(self.channel_saliency_predictor.weight, mode='fan_out', nonlinearity='relu')
@@ -16,7 +17,12 @@ class ChannelVectorUnit(nn.Module):
         x = self.pooling(x).squeeze()
         x = self.channel_saliency_predictor(x)
         x = self.sigmoid(x)
+        x = self.expand(x)
         return x
+
+    def expand(self, x):
+        bs, vec_size = x.shape
+        return x.unsqueeze(dim=-1).expand(bs, vec_size, self.group_size).reshape(bs, vec_size*self.group_size)
 
 
 def winner_take_all(x, sparsity_ratio):

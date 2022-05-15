@@ -53,6 +53,8 @@ def main():
     parser.add_argument('--load', type=str, default='', help='load model path')
     parser.add_argument('--layer_loss_method', type=str, default='flops', help='Calculation for layer-wise methods')
     parser.add_argument('--mask_type', type=str, default='conv', help='Type of mask')
+    parser.add_argument('--group_size', type=int, default=1, help='The number for grouping channel pruning')
+    parser.add_argument('--pooling_method', type=str, default='max', help='Maxpooling or AveragePooling')
     parser.add_argument('--mask_kernel', default=3, type=int, help='number of epochs')
     parser.add_argument('--no_attention', action='store_true', help='run without attention')
     parser.add_argument('--input_resolution', action='store_true',
@@ -92,7 +94,8 @@ def main():
                        individual_forward=args.individual_forward, save_feat=args.feat_save_dir,
                        target_stage=args.target_stage, mask_thresh=args.mask_thresh,
                        random_mask_stage=args.random_mask_stage, skip_layer_thresh=args.skip_layer_thresh,
-                       input_resolution=args.input_resolution).to(device=device)
+                       input_resolution=args.input_resolution, pooling_method=args.pooling_method,
+                       group_size=args.group_size).to(device=device)
 
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0,
             "feat_before": [], "feat_after": [], "lasso_sum": 0}
