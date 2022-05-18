@@ -372,12 +372,12 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
                     (epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(sparse_loss_record.avg, 4)))
             f.write("Train Layer Percentage: {}\n".format(layer_str))
 
-    if criterion.tb_writer:
-        criterion.tb_writer.add_scalar("train/TASK LOSS-EPOCH", task_loss_record.avg, epoch)
-        criterion.tb_writer.add_scalar("train/Prec@1-EPOCH", top1.avg, epoch)
-        criterion.tb_writer.add_scalar('train/SPARSE LOSS-EPOCH', sparse_loss_record.avg, epoch)
-        for idx, recorder in enumerate(layer_sparsity_records):
-            criterion.tb_writer.add_scalar("train/LAYER {}-EPOCH".format(idx + 1), recorder.avg, epoch)
+    # if criterion.tb_writer:
+    #     criterion.tb_writer.add_scalar("train/TASK LOSS-EPOCH", task_loss_record.avg, epoch)
+    #     criterion.tb_writer.add_scalar("train/Prec@1-EPOCH", top1.avg, epoch)
+    #     criterion.tb_writer.add_scalar('train/SPARSE LOSS-EPOCH', sparse_loss_record.avg, epoch)
+    #     for idx, recorder in enumerate(layer_sparsity_records):
+    #         criterion.tb_writer.add_scalar("train/LAYER {}-EPOCH".format(idx + 1), recorder.avg, epoch)
 
 
 def validate(args, val_loader, model, criterion, epoch, file_path=None):
@@ -447,13 +447,13 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
                     format(epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(sparse_loss_record.avg, 4),
                            round(model.compute_average_flops_cost()[0] / 1e6), 6))
             f.write("Validation Layer percentage: {}\n".format(layer_str))
-    if criterion.tb_writer:
-        criterion.tb_writer.add_scalar("valid/TASK LOSS-EPOCH", task_loss_record.avg, epoch)
-        criterion.tb_writer.add_scalar("valid/Prec@1-EPOCH", top1.avg, epoch)
-        criterion.tb_writer.add_scalar('valid/SPARSE LOSS-EPOCH', sparse_loss_record.avg, epoch)
-        criterion.tb_writer.add_scalar("valid/MMac-EPOCH", model.compute_average_flops_cost()[0] / 1e6, epoch)
-        for idx, recorder in enumerate(layer_sparsity_records):
-            criterion.tb_writer.add_scalar("valid/LAYER {}-EPOCH".format(idx + 1), recorder.avg, epoch)
+    # if criterion.tb_writer:
+    #     criterion.tb_writer.add_scalar("valid/TASK LOSS-EPOCH", task_loss_record.avg, epoch)
+    #     criterion.tb_writer.add_scalar("valid/Prec@1-EPOCH", top1.avg, epoch)
+    #     criterion.tb_writer.add_scalar('valid/SPARSE LOSS-EPOCH', sparse_loss_record.avg, epoch)
+    #     criterion.tb_writer.add_scalar("valid/MMac-EPOCH", model.compute_average_flops_cost()[0] / 1e6, epoch)
+    #     for idx, recorder in enumerate(layer_sparsity_records):
+    #         criterion.tb_writer.add_scalar("valid/LAYER {}-EPOCH".format(idx + 1), recorder.avg, epoch)
     return top1.avg, model.compute_average_flops_cost()[0] / 1e6
 
 
