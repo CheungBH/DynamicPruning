@@ -84,7 +84,7 @@ class Bottleneck(nn.Module):
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1, base_width=64, dilation=1,
                  norm_layer=None, sparse=False, resolution_mask=False, mask_block=False, mask_type="conv",
-                 save_feat=False, input_resolution=False, **kwargs):
+                 save_feat=False, input_resolution=False, conv1_act="relu", **kwargs):
         super(Bottleneck, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
@@ -101,6 +101,14 @@ class Bottleneck(nn.Module):
         self.conv3 = conv1x1(width, planes * self.expansion)
         self.bn3 = norm_layer(planes * self.expansion)
         self.relu = nn.ReLU(inplace=True)
+        if conv1_act == "relu":
+            self.conv1_act = nn.ReLU(inplace=True)
+        elif conv1_act == "leaky_relu":
+            self.conv1_act = nn.LeakyReLU(inplace=True)
+        elif conv1_act == "none":
+            self.conv1_act = None
+        else:
+            raise NotImplementedError
         self.downsample = downsample
         self.stride = stride
         self.sparse = sparse
@@ -204,7 +212,7 @@ class Bottleneck(nn.Module):
             mask_dilate, mask = m['dilate'], m['std']
 
             x = dynconv.conv1x1(self.conv1, x, mask_dilate)
-            x = dynconv.bn_relu(self.bn1, self.relu, x, mask_dilate)
+            x = dynconv.bn_relu(self.bn1, self.conv1_act, x, mask_dilate)
             x = dynconv.apply_mask(x, mask_dilate) if self.input_resolution else x
             x = dynconv.conv3x3(self.conv2, x, mask_dilate, mask)
             x = dynconv.bn_relu(self.bn2, self.relu, x, mask)

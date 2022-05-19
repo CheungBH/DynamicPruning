@@ -50,6 +50,8 @@ def main():
     # Negative value for directly skip; Positive for using formula to skip
     parser.add_argument('--model', type=str, default='resnet101', help='network model name')
     parser.add_argument('--model_cfg', type=str, default='baseline', help='network model name')
+    parser.add_argument('--conv1_act', type=str, default='relu', help='the activation function of ')
+
     parser.add_argument('--load', type=str, default='', help='load model path')
     parser.add_argument('--layer_loss_method', type=str, default='flops', help='Calculation for layer-wise methods')
     parser.add_argument('--mask_type', type=str, default='conv', help='Type of mask')
@@ -88,7 +90,7 @@ def main():
                        individual_forward=args.individual_forward, save_feat=args.feat_save_dir,
                        target_stage=args.target_stage, mask_thresh=args.mask_thresh,
                        random_mask_stage=args.random_mask_stage, skip_layer_thresh=args.skip_layer_thresh,
-                       input_resolution=args.input_resolution).to(device=device)
+                       input_resolution=args.input_resolution, conv1_act=args.conv1_act).to(device=device)
 
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0,
             "feat_before": [], "feat_after": []}
