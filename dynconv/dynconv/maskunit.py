@@ -132,7 +132,7 @@ class MaskUnit(nn.Module):
         if dilate:
             self.expandmask = ExpandMask(stride=dilate_stride)
         self.budget = budget
-        self.skip_layer_thresh = skip_layer_thresh + 1e-8
+        self.skip_layer_thresh = skip_layer_thresh + 1e-8 if skip_layer_thresh != 0 else skip_layer_thresh
         self.input_res = input_resolution
         if self.input_res:
             self.maxpool = nn.MaxPool2d(kernel_size=2)
