@@ -33,8 +33,10 @@ class SimpleArguments:
 
     def update(self, args):
         if args.model_args:
+            print("Using simple model args: {}".format(args.model_args))
             args = self.update_model_args(args.model_args, args)
         if args.loss_args:
+            print("Using loss model args: {}".format(args.loss_args))
             args = self.update_loss_args(args.loss_args, args)
         if self.data_root:
             args.dataset_root = self.data_root
