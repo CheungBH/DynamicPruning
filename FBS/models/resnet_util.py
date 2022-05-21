@@ -5,8 +5,8 @@ try:
     from torch.hub import load_state_dict_from_url
 except ImportError:
     from torch.utils.model_zoo import load_url as load_state_dict_from_url
-import models.resnet_util
-from models.channel_saliency import *
+# import models.resnet_util
+from models.channel_saliency import conv_forward, bn_relu_foward, channel_process, ChannelVectorUnit
 
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
@@ -192,33 +192,23 @@ class Bottleneck(nn.Module):
                 meta["feat_after"].append(out)
         else:
             assert meta is not None
-            # meta["stride"] = self.stride
             vector = self.obtain_vector(meta)
-            # meta["lasso_sum"] += torch.mean(torch.sum(vector, dim=-1))
-            # vector_mask = winner_take_all(vector.clone(), self.budget)
-            out = self.conv1(x)
-            out = self.bn1(out)
-            out = self.relu(out)
-            out = self.channel_process(out, vector)
 
-            out = self.conv2(out)
-            out = self.bn2(out)
-            out = self.relu(out)
-            out = self.channel_process(out, vector)
+            out = conv_forward(self.conv1, x, out_vec=vector)
+            out = bn_relu_foward(self.bn1, self.relu, out, vector)
+            out = channel_process(out, vector)
 
-            out = self.conv3(out)
-            out = self.bn3(out)
+            out = conv_forward(self.conv2, out, inp_vec=vector, out_vec=vector)
+            out = bn_relu_foward(self.bn2, self.relu, out, vector)
+            out = channel_process(out, vector)
+
+            out = conv_forward(self.conv3, out, inp_vec=vector)
+            out = bn_relu_foward(self.bn3, None, out)
             out += identity
 
         out = self.relu(out)
         meta["masked_feat"] = self.get_masked_feature(out)
         return out, meta
-
-    def channel_process(self, x, vector):
-        if len(vector.shape) != 2:
-            return x * vector
-        else:
-            return x * vector.unsqueeze(-1).unsqueeze(-1).expand_as(x)
 
     def get_masked_feature(self, x, mask=None):
         if mask is None:

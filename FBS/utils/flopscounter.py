@@ -272,3 +272,6 @@ def remove_flops_counter_hook_function(module):
 def add_flops_mask_variable_or_reset(module):
     if is_supported_instance(module):
         module.__mask__ = None
+        module.__input_ratio__ = 1
+        module.__output_ratio__ = 1
+

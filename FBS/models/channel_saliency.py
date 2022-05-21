@@ -31,12 +31,42 @@ class ChannelVectorUnit(nn.Module):
     def winner_take_all(self, x):
         if self.sparsity >= 1.0:
             return x
+        elif x.size(-1) == 1:
+            return (x > -1).int()
         else:
             k = math.ceil((1 - self.sparsity) * x.size(-1))
-            inactive_idx = (-x).topk(k - 1, 1)[1]
+            inactive_idx = (-x).topk(k)[1]
             zero_filtered = x.scatter_(1, inactive_idx, 0)
             return (zero_filtered > 0).int()
 
+
+def conv_forward(conv_module, x, inp_vec=None, out_vec=None):
+    conv_module.__input_ratio__ = vector_ratio(inp_vec)
+    conv_module.__output_ratio__ = vector_ratio(out_vec)
+    return conv_module(x)
+
+
+def bn_relu_foward(bn_module, relu_module, x, vector=None):
+    bn_module.__output_ratio__ = vector_ratio(vector)
+    if relu_module is not None:
+        relu_module.vector = vector
+
+    x = bn_module(x)
+    x = relu_module(x) if relu_module is not None else x
+    return x
+
+
+def channel_process(x, vector):
+    if len(vector.shape) != 2:
+        return x * vector
+    else:
+        return x * vector.unsqueeze(-1).unsqueeze(-1).expand_as(x)
+
+
+def vector_ratio(vector):
+    if vector is None:
+        return 1
+    return torch.true_divide(vector.sum(), vector.numel()).tolist()
 
 # def winner_take_all(x, sparsity_ratio):
 #     if sparsity_ratio < 1.0:
@@ -46,38 +76,3 @@ class ChannelVectorUnit(nn.Module):
 #         return (zero_filtered > 0).int()
 #     else:
 #         return x
-
-
-def conv1x1(conv_module, x, mask, fast=False):
-    w = conv_module.weight.data
-    mask.flops_per_position += w.shape[0]*w.shape[1]
-    conv_module.__mask__ = mask
-    return conv_module(x)
-
-
-def conv3x3_dw(conv_module, x, mask_dilate, mask, fast=False):
-    w = conv_module.weight.data
-    mask.flops_per_position += w.shape[0]*w.shape[1]*w.shape[2]*w.shape[3]
-    conv_module.__mask__ = mask
-    return conv_module(x)
-
-
-def conv3x3(conv_module, x, mask_dilate, mask, fast=False):
-    w = conv_module.weight.data
-    mask.flops_per_position += w.shape[0]*w.shape[1]*w.shape[2]*w.shape[3]
-    conv_module.__mask__ = mask
-    return conv_module(x)
-
-
-## BATCHNORM and RELU
-def bn_relu(bn_module, relu_module, x, mask, fast=False):
-    bn_module.__mask__ = mask
-    if relu_module is not None:
-        relu_module.__mask__ = mask
-
-    x = bn_module(x)
-    x = relu_module(x) if relu_module is not None else x
-    return x
-
-def apply_saliency(x, vector):
-    pass
