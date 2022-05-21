@@ -1,9 +1,20 @@
 #-*-coding:utf-8-*-
 
 cmds = [
-    "CUDA_VISIBLE_DEVICES=0 python main_imagenet.py --model_cfg hardware --mask_kernel 1 --model resnet50 --no_attention --input_resolution --dataset-root /media/ssd0/imagenet --batchsize 80 --budget 0.75 --load exp/imagenet_1x1/baseline/checkpoint_best.pth --sparse_strategy static --sparse_weight 0 --valid_range 1 -s exp/add_conv1_mask/s75",
-    "CUDA_VISIBLE_DEVICES=1 python main_imagenet.py --model_cfg hardware --mask_kernel 1 --model resnet50 --no_attention --input_resolution --dataset-root /media/ssd0/imagenet --batchsize 80 --budget 0.50 --load exp/imagenet_1x1/baseline/checkpoint_best.pth --sparse_strategy static --sparse_weight 0 --valid_range 1 -s exp/add_conv1_mask/s50",
-    "CUDA_VISIBLE_DEVICES=2 python main_imagenet.py --model_cfg hardware --mask_kernel 1 --model resnet50 --no_attention --input_resolution --dataset-root /media/ssd0/imagenet --batchsize 80 --budget 0.25 --load exp/imagenet_1x1/baseline/checkpoint_best.pth --sparse_strategy static --sparse_weight 0 --valid_range 1 -s exp/add_conv1_mask/s25",
+    "CUDA_VISIBLE_DEVICES=1 python main_imagenet.py --model_args hardware_resnet50 --lr 0.01 --input_resolution --batchsize 80 --budget 0.5 --loss_args layer_wise --unlimited_lower -s exp/add_conv1_mask/s50_lr0.01_relu_layerloss",
+    "CUDA_VISIBLE_DEVICES=1 python main_imagenet.py --model_args hardware_resnet50 --lr 0.01 --input_resolution --batchsize 80 --budget 0.5 --loss_args flops -s exp/add_conv1_mask/s50_lr0.01_relu_flops",
+    "CUDA_VISIBLE_DEVICES=1 python main_imagenet.py --model_args hardware_resnet50 --lr 0.01 --input_resolution --batchsize 80 --budget 0.5 --loss_args layer_wise --unlimited_lower -s exp/add_conv1_mask/s50_lr0.01_relu_layerloss_front --layer_loss_method front_mask",
+    "CUDA_VISIBLE_DEVICES=1 python main_imagenet.py --model_args hardware_resnet50 --lr 0.01 --input_resolution --batchsize 80 --budget 0.5 --loss_args layer_wise --unlimited_lower -s exp/add_conv1_mask/s50_lr0.01_relu_layerloss_later --layer_loss_method later_mask",
+
+    "CUDA_VISIBLE_DEVICES=1 python main_imagenet.py --model_args hardware_resnet50 --lr 0.01 --input_resolution --batchsize 80 --budget 0.5 --conv1_act none --loss_args layer_wise --unlimited_lower -s exp/add_conv1_mask/s50_lr0.01_none_layerloss",
+    "CUDA_VISIBLE_DEVICES=1 python main_imagenet.py --model_args hardware_resnet50 --lr 0.01 --input_resolution --batchsize 80 --budget 0.5 --conv1_act none --loss_args flops -s exp/add_conv1_mask/s50_lr0.01_none_flops",
+    "CUDA_VISIBLE_DEVICES=1 python main_imagenet.py --model_args hardware_resnet50 --lr 0.01 --input_resolution --batchsize 80 --budget 0.5 --conv1_act none --loss_args layer_wise --unlimited_lower -s exp/add_conv1_mask/s50_lr0.01_none_layerloss_front --layer_loss_method front_mask",
+    "CUDA_VISIBLE_DEVICES=1 python main_imagenet.py --model_args hardware_resnet50 --lr 0.01 --input_resolution --batchsize 80 --budget 0.5 --conv1_act none --loss_args layer_wise --unlimited_lower -s exp/add_conv1_mask/s50_lr0.01_none_layerloss_later --layer_loss_method later_mask",
+
+    "CUDA_VISIBLE_DEVICES=1 python main_imagenet.py --model_args hardware_resnet50 --lr 0.01 --input_resolution --batchsize 80 --budget 0.5 --conv1_act leaky_relu --loss_args layer_wise --unlimited_lower -s exp/add_conv1_mask/s50_lr0.01_lrelu_layerloss",
+    "CUDA_VISIBLE_DEVICES=1 python main_imagenet.py --model_args hardware_resnet50 --lr 0.01 --input_resolution --batchsize 80 --budget 0.5 --conv1_act leaky_relu --loss_args flops -s exp/add_conv1_mask/s50_lr0.01_lrelu_flops",
+    "CUDA_VISIBLE_DEVICES=1 python main_imagenet.py --model_args hardware_resnet50 --lr 0.01 --input_resolution --batchsize 80 --budget 0.5 --conv1_act leaky_relu --loss_args layer_wise --unlimited_lower -s exp/add_conv1_mask/s50_lr0.01_lrelu_layerloss_front --layer_loss_method front_mask",
+    "CUDA_VISIBLE_DEVICES=1 python main_imagenet.py --model_args hardware_resnet50 --lr 0.01 --input_resolution --batchsize 80 --budget 0.5 --conv1_act leaky_relu --loss_args layer_wise --unlimited_lower -s exp/add_conv1_mask/s50_lr0.01_lrelu_layerloss_later --layer_loss_method later_mask",
 
 ]
 
