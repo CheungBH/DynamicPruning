@@ -19,7 +19,7 @@ import utils.logger as logger
 import utils.utils as utils
 import utils.viz as viz
 from torch.backends import cudnn as cudnn
-
+from .simple_args import SimpleArguments
 
 from apex import amp
 mix_precision = True
@@ -32,53 +32,69 @@ iteration = 0
 def main():
     global iteration
     parser = argparse.ArgumentParser(description='PyTorch ImageNet Training with sparse masks')
+
+    # basic
+    parser.add_argument('--dataset-root', default='/esat/visicsrodata/datasets/ilsvrc2012/', type=str, metavar='PATH',
+                    help='ImageNet dataset root')
+    parser.add_argument('--batchsize', default=64, type=int, help='batch size')
+    parser.add_argument('--epochs', default=100, type=int, help='number of epochs')
+    parser.add_argument('--budget', default=-1, type=float, help='computational budget (between 0 and 1) (-1 for no sparsity)')
+    parser.add_argument('--workers', default=8, type=int, help='number of dataloader workers')
+
+    # learning strategy
     parser.add_argument('--lr', default=0.025, type=float, help='learning rate')
     parser.add_argument('--lr_decay', default=[30,60,90], nargs='+', help='learning rate decay epochs')
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
     parser.add_argument('--weight_decay', default=1e-4, type=float, help='weight decay')
-    parser.add_argument('--sparse_weight', default=10, type=float, help='weight of network sparsity')
+    parser.add_argument('--optim', type=str, default='sgd', help='network model name')
+    parser.add_argument('--scheduler', type=str, default='step', help='network model name')
+
+    # loss
+    parser.add_argument('--net_weight', default=10, type=float, help='weight of network sparsity')
     parser.add_argument('--layer_weight', default=10, type=float, help='weight of layer sparsity')
     parser.add_argument('--sparse_strategy', type=str, default='static', help='Type of mask')
     parser.add_argument('--valid_range', type=float, default=0.33, help='Type of mask')
-    parser.add_argument('--static_range', type=float, default=0.2, help='Type of mask')
-    parser.add_argument('--target_stage', nargs="+", type=int, help='target stage for pretrain mask')
-    parser.add_argument('--random_mask_stage', nargs="+", type=int, default=[-1], help='target stage for pretrain mask')
-    parser.add_argument('--batchsize', default=64, type=int, help='batch size')
-    parser.add_argument('--epochs', default=100, type=int, help='number of epochs')
-    parser.add_argument('--mask_thresh', default=0.5, type=float, help='The numerical threshold of mask')
-    parser.add_argument('--skip_layer_thresh', default=0, type=float, help='The numerical threshold of mask')
-    # Negative value for directly skip; Positive for using formula to skip
+    parser.add_argument('--static_range', type=float, default=0, help='Type of mask')
+    parser.add_argument('--layer_loss_method', type=str, default='flops', help='Calculation for layer-wise methods')
+    parser.add_argument('--unlimited_lower', action='store_true', help='loss without lower constraints')
+
+    # model
     parser.add_argument('--model', type=str, default='resnet101', help='network model name')
     parser.add_argument('--model_cfg', type=str, default='baseline', help='network model name')
-    parser.add_argument('--conv1_act', type=str, default='relu', help='the activation function of ')
-
-    parser.add_argument('--load', type=str, default='', help='load model path')
-    parser.add_argument('--layer_loss_method', type=str, default='flops', help='Calculation for layer-wise methods')
+    parser.add_argument('--conv1_act', type=str, default='relu', help='the activation function of conv1')
+    parser.add_argument('--resolution_mask', action='store_true', help='share a mask within a same resolution')
+    # Negative value for directly skip; Positive for using formula to skip
     parser.add_argument('--mask_type', type=str, default='conv', help='Type of mask')
     parser.add_argument('--mask_kernel', default=3, type=int, help='number of epochs')
     parser.add_argument('--no_attention', action='store_true', help='run without attention')
     parser.add_argument('--input_resolution', action='store_true', help='The mask resolution is based on the input size')
+    # special args
+    parser.add_argument('--mask_thresh', default=0.5, type=float, help='The numerical threshold of mask')
+    parser.add_argument('--target_stage', nargs="+", type=int, help='target stage for pretrain mask')
+    parser.add_argument('--random_mask_stage', nargs="+", type=int, default=[-1], help='target stage for pretrain mask')
     parser.add_argument('--individual_forward', action='store_true', help='for stat mask: Treating each sample individually')
-    parser.add_argument('--unlimited_lower', action='store_true', help='loss without lower constraints')
+    parser.add_argument('--skip_layer_thresh', default=0, type=float, help='The numerical threshold of mask')
 
-    parser.add_argument('--budget', default=-1, type=float, help='computational budget (between 0 and 1) (-1 for no sparsity)')
+    # file management
     parser.add_argument('-s', '--save_dir', type=str, default='', help='directory to save model')
     parser.add_argument('-r', '--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
-    parser.add_argument('--dataset-root', default='/esat/visicsrodata/datasets/ilsvrc2012/', type=str, metavar='PATH',
-                    help='ImageNet dataset root')
+    parser.add_argument('--load', type=str, default='', help='load model path')
+    parser.add_argument('--auto_resume', action='store_true', help='plot ponder cost')
+
+    # evaluation
     parser.add_argument('-e', '--evaluate', action='store_true', help='evaluation mode')
-    parser.add_argument('--resolution_mask', action='store_true', help='share a mask within a same resolution')
     parser.add_argument('--plot_ponder', action='store_true', help='plot ponder cost')
     parser.add_argument('--feat_save_dir', default='', help='plot ponder cost')
     parser.add_argument('--plot_save_dir', default='', help='plot ponder cost')
-    parser.add_argument('--auto_resume', action='store_true', help='plot ponder cost')
-    parser.add_argument('--optim', type=str, default='sgd', help='network model name')
-    parser.add_argument('--scheduler', type=str, default='step', help='network model name')
-    parser.add_argument('--workers', default=8, type=int, help='number of dataloader workers')
-    args =  parser.parse_args()
-    print('Args:', args)
 
+    # simple arguments
+    args = parser.parse_args()
+    parser.add_argument('--model_args', type=str, default='', help='load model path')
+    parser.add_argument('--loss_args', type=str, default='', help='load model path')
+
+    print('Args:', args)
+    args = SimpleArguments().update(args)
     res = 224
 
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
@@ -164,8 +180,10 @@ def main():
     cmd = utils.generate_cmd(sys.argv[1:])
     with open(file_path, "a+") as f:
         f.write(cmd + "\n")
+        print('Args:', args, file=f)
+        f.write("\n")
 
-    criterion = Loss(args.budget, net_weight=args.sparse_weight, block_weight=args.layer_weight, num_epochs=args.epochs,
+    criterion = Loss(args.budget, net_weight=args.net_weight, block_weight=args.layer_weight, num_epochs=args.epochs,
                      strategy=args.sparse_strategy, valid_range=args.valid_range, static_range=args.static_range,
                      tensorboard_folder=tb_folder, unlimited_lower=args.unlimited_lower,
                      layer_loss_method=args.layer_loss_method)
