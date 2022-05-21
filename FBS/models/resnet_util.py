@@ -116,7 +116,7 @@ class Bottleneck(nn.Module):
                 if mask_type == "fc":
                     if not input_resolution:
                         self.saliency = ChannelVectorUnit(in_channels=inplanes, out_channels=planes,
-                                                          group_size=group_size, **kwargs)
+                                                          group_size=group_size, budget=self.budget, **kwargs)
                     else:
                         raise NotImplementedError
                 else:
@@ -194,17 +194,17 @@ class Bottleneck(nn.Module):
             assert meta is not None
             # meta["stride"] = self.stride
             vector = self.obtain_vector(meta)
-            meta["lasso_sum"] += torch.mean(torch.sum(vector, dim=-1))
-            vector_mask = winner_take_all(vector.clone(), self.budget)
+            # meta["lasso_sum"] += torch.mean(torch.sum(vector, dim=-1))
+            # vector_mask = winner_take_all(vector.clone(), self.budget)
             out = self.conv1(x)
             out = self.bn1(out)
             out = self.relu(out)
-            out = self.channel_process(out, vector_mask)
+            out = self.channel_process(out, vector)
 
             out = self.conv2(out)
             out = self.bn2(out)
             out = self.relu(out)
-            out = self.channel_process(out, vector_mask)
+            out = self.channel_process(out, vector)
 
             out = self.conv3(out)
             out = self.bn3(out)
