@@ -19,7 +19,7 @@ import utils.logger as logger
 import utils.utils as utils
 import utils.viz as viz
 from torch.backends import cudnn as cudnn
-from .simple_args import SimpleArguments
+from simple_args import SimpleArguments
 
 from apex import amp
 mix_precision = True
@@ -89,10 +89,10 @@ def main():
     parser.add_argument('--plot_save_dir', default='', help='plot ponder cost')
 
     # simple arguments
-    args = parser.parse_args()
+
     parser.add_argument('--model_args', type=str, default='', help='load model path')
     parser.add_argument('--loss_args', type=str, default='', help='load model path')
-
+    args = parser.parse_args()
     print('Args:', args)
     args = SimpleArguments().update(args)
     res = 224
