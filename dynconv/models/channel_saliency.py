@@ -9,6 +9,8 @@ class MaskedAvePooling(nn.Module):
         self.pooling = nn.AdaptiveAvgPool2d(size)
 
     def forward(self, x, mask):
+        if mask is None:
+            return self.pooling(x)
         pooled_feat = self.pooling(x * mask.expand_as(x))
         total_pixel_num = mask.shape[-1] * mask.shape[-2]
         active_pixel_num = mask.view(x.shape[0], -1).sum(dim=1)
@@ -61,10 +63,11 @@ class ChannelVectorUnit(nn.Module):
             return (zero_filtered > 0).int()
 
 
-def conv_forward(conv_module, x, inp_vec=None, out_vec=None):
+def conv_forward(conv_module, x, inp_vec=None, out_vec=None, forward=True):
     conv_module.__input_ratio__ = vector_ratio(inp_vec)
     conv_module.__output_ratio__ = vector_ratio(out_vec)
-    return conv_module(x)
+    if forward:
+        return conv_module(x)
 
 
 def bn_relu_foward(bn_module, relu_module, x, vector=None):

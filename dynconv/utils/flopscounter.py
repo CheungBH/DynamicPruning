@@ -186,14 +186,14 @@ def conv_flops_counter_hook(conv_module, input, output):
     groups = conv_module.groups
 
     filters_per_channel = out_channels // groups
-    conv_per_position_flops = kernel_height * kernel_width * in_channels * filters_per_channel
+    conv_per_position_flops = kernel_height * kernel_width * in_channels * filters_per_channel * \
+                              conv_module.__input_ratio__ * conv_module.__output_ratio__
 
 
     if conv_module.__mask__ is None:
         active_elements_count = batch_size * output_height * output_width
     else:
         active_elements_count = float(conv_module.__mask__.active_positions)
-
 
     overall_conv_flops = conv_per_position_flops * active_elements_count
 
@@ -272,3 +272,5 @@ def remove_flops_counter_hook_function(module):
 def add_flops_mask_variable_or_reset(module):
     if is_supported_instance(module):
         module.__mask__ = None
+        module.__input_ratio__ = 1
+        module.__output_ratio__ = 1

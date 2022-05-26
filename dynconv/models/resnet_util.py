@@ -238,10 +238,12 @@ class Bottleneck(nn.Module):
             x = dynconv.apply_mask(x, mask_dilate) if self.input_resolution else x
             if self.channel_budget > 0:
                 x = channel_process(x, vector)
+                conv_forward(self.conv1, None, None, vector, forward=False)
             x = dynconv.conv3x3(self.conv2, x, mask_dilate, mask)
             x = dynconv.bn_relu(self.bn2, self.relu, x, mask)
             if self.channel_budget > 0:
                 x = channel_process(x, vector)
+                conv_forward(self.conv2, None, vector, vector, forward=False)
             x = dynconv.conv1x1(self.conv3, x, mask)
             x = dynconv.bn_relu(self.bn3, None, x, mask)
             out = identity + dynconv.apply_mask(x, mask)
