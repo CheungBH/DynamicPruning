@@ -13,6 +13,12 @@ class SimpleArguments:
             args.mask_type = "conv"
             args.mask_kernel = 1
             args.no_attention = True
+        if idx == "hardware_2048":
+            args.model = "resnet50"
+            args.model_cfg = "hardware_2048"
+            args.mask_type = "conv"
+            args.mask_kernel = 1
+            args.no_attention = True
         elif not idx:
             pass
         else:
