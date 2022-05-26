@@ -13,6 +13,12 @@ class SimpleArguments:
             args.mask_type = "conv"
             args.mask_kernel = 1
             args.no_attention = True
+        if idx == "hardware_2048":
+            args.model = "resnet50"
+            args.model_cfg = "hardware_2048"
+            args.mask_type = "conv"
+            args.mask_kernel = 1
+            args.no_attention = True
         elif not idx:
             pass
         else:
@@ -40,9 +46,11 @@ class SimpleArguments:
             args = self.update_loss_args(args.loss_args, args)
         if self.data_root:
             args.dataset_root = self.data_root
-        if args.load == "pretrain":
-            args.load = self.pretrain_weight
-        elif self.load_weight:
-            print("Replacing weight checkpoint: {} -> {}".format(args.load, self.load_weight))
-            args.load = self.load_weight
+
+        if not args.evaluate:
+            if args.load == "pretrain":
+                args.load = self.pretrain_weight
+            elif self.load_weight:
+                print("Replacing weight checkpoint: {} -> {}".format(args.load, self.load_weight))
+                args.load = self.load_weight
         return args

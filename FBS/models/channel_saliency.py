@@ -25,7 +25,7 @@ class ChannelVectorUnit(nn.Module):
         x = self.channel_saliency_predictor(x)
         x = self.sigmoid(x)
         meta["lasso_sum"] += torch.mean(torch.sum(x, dim=-1))
-        x = self.winner_take_all(x)
+        x = self.winner_take_all(x.clone())
         x = self.expand(x)
         return x
 
