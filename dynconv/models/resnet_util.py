@@ -8,6 +8,7 @@ except ImportError:
 import dynconv
 from dynconv.maskunit import StatMaskUnit
 import models.resnet_util
+from models.channel_saliency import conv_forward, bn_relu_foward, channel_process, ChannelVectorUnit
 
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
@@ -79,12 +80,14 @@ class BasicBlock(nn.Module):
         out = self.relu(out)
         return out, meta
 
+
 class Bottleneck(nn.Module):
     expansion = 4
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1, base_width=64, dilation=1,
                  norm_layer=None, sparse=False, resolution_mask=False, mask_block=False, mask_type="conv",
-                 save_feat=False, input_resolution=False, conv1_act="relu", **kwargs):
+                 save_feat=False, input_resolution=False, conv1_act="relu", channel_budget=-1, channel_unit_type="fc",
+                 group_size=1, **kwargs):
         super(Bottleneck, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
@@ -118,10 +121,16 @@ class Bottleneck(nn.Module):
         self.mask_type = mask_type
         self.input_resolution = input_resolution
         self.mask_sampler = nn.MaxPool2d(kernel_size=2)
+        self.channel_budget = channel_budget
 
         if sparse:
+            if channel_budget >= 0:
+                if channel_unit_type == "fc":
+                    self.saliency = ChannelVectorUnit(in_channels=inplanes, out_channels=planes,
+                                                      group_size=group_size, channel_budget=channel_budget, **kwargs)
+
             if resolution_mask and not self.mask_block:
-                return
+                pass
             else:
                 if mask_type == "conv":
                     # in the resnet basic block, the first convolution is already strided, so mask_stride = 1
@@ -184,6 +193,13 @@ class Bottleneck(nn.Module):
             m = self.masker(x, meta)
         return m
 
+    def obtain_vector(self, x, meta):
+        if self.resolution_mask:
+            raise NotImplementedError
+        else:
+            vector = self.saliency(x, meta)
+        return vector
+
     def forward(self, input):
         x, meta = input
         identity = x
@@ -214,17 +230,29 @@ class Bottleneck(nn.Module):
             m = self.obtain_mask(x, meta)
             mask_dilate, mask = m['dilate'], m['std']
 
+            if self.channel_budget > 0:
+                vector = self.obtain_vector(x, meta)
+
             x = dynconv.conv1x1(self.conv1, x, mask_dilate)
             x = dynconv.bn_relu(self.bn1, self.conv1_act, x, mask_dilate)
             x = dynconv.apply_mask(x, mask_dilate) if self.input_resolution else x
+            if self.channel_budget > 0:
+                x = channel_process(x, vector)
             x = dynconv.conv3x3(self.conv2, x, mask_dilate, mask)
             x = dynconv.bn_relu(self.bn2, self.relu, x, mask)
+            if self.channel_budget > 0:
+                x = channel_process(x, vector)
             x = dynconv.conv1x1(self.conv3, x, mask)
             x = dynconv.bn_relu(self.bn3, None, x, mask)
             out = identity + dynconv.apply_mask(x, mask)
+            meta["masked_feat"] = self.get_masked_feature(x, mask.hard)
 
         out = self.relu(out)
         return out, meta
 
-    # def forward_stride_mask(self, x, mask):
-    #     return dynconv.apply_mask(x, mask) if self.input_resolution else x
+    def get_masked_feature(self, x, mask=None):
+        if mask is None:
+            return torch.ones(x.shape[0], 1, x.shape[-2], x.shape[-1]).cuda()
+        else:
+            return mask
+

@@ -58,6 +58,13 @@ def main():
     parser.add_argument('--layer_loss_method', type=str, default='flops', help='Calculation for layer-wise methods')
     parser.add_argument('--unlimited_lower', action='store_true', help='loss without lower constraints')
 
+    # channel arguments
+    parser.add_argument('--group_size', type=int, default=1, help='The number for grouping channel pruning')
+    parser.add_argument('--pooling_method', type=str, default='max', help='Maxpooling or AveragePooling')
+    parser.add_argument('--channel_budget', default=-1, type=float, help='computational budget (between 0 and 1) (-1 for no sparsity)')
+    parser.add_argument('--channel_unit_type', type=str, default='fc', help='Type of mask')
+    parser.add_argument('--channel_stage', nargs="+", type=int, help='target stage for pretrain mask')
+
     # model
     parser.add_argument('--model', type=str, default='resnet101', help='network model name')
     parser.add_argument('--model_cfg', type=str, default='baseline', help='network model name')
@@ -106,10 +113,12 @@ def main():
                        individual_forward=args.individual_forward, save_feat=args.feat_save_dir,
                        target_stage=args.target_stage, mask_thresh=args.mask_thresh,
                        random_mask_stage=args.random_mask_stage, skip_layer_thresh=args.skip_layer_thresh,
-                       input_resolution=args.input_resolution, conv1_act=args.conv1_act).to(device=device)
+                       input_resolution=args.input_resolution, conv1_act=args.conv1_act, group_size=args.group_size,
+                       pooling_method=args.pooling_method, channel_budget=args.channel_budget,
+                       channel_unit_type=args.channel_unit_type, channel_stage=args.channel_stage).to(device=device)
 
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0,
-            "feat_before": [], "feat_after": []}
+            "feat_before": [], "feat_after": [], "lasso_sum": 0}
     _ = model(torch.rand((2, 3, res, res)).cuda(), meta)
 
 
@@ -351,7 +360,8 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
         target = target.to(device=device, non_blocking=True)
 
         # compute output
-        meta = {'masks': [], 'device': device, 'gumbel_temp': gumbel_temp, 'gumbel_noise': gumbel_noise, 'epoch': epoch}
+        meta = {'masks': [], 'device': device, 'gumbel_temp': gumbel_temp, 'gumbel_noise': gumbel_noise, 'epoch': epoch,
+                "lasso_sum": 0}
         output, meta = model(input, meta)
         t_loss, s_loss, layer_percents = criterion(output, target, meta)
         prec1 = utils.accuracy(output.data, target)[0]

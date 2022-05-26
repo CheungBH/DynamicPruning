@@ -34,5 +34,5 @@ python main_imagenet.py -s exp/imagenet_mobile/baseline_s50_re-1 --sparse_weight
 python main_imagenet.py -s exp/imagenet_mobile/baseline_s50_re-3 --sparse_weight 1e-3 --budget 0.5 --batchsize 96 --model MobileNetV2 --load exp/imagenet_mobile/baseline_best.pth --dataset-root
 
 
-
+ --group_size 64 --channel_budget 0.5 --channel_stage 2 3
 
