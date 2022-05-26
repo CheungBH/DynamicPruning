@@ -153,12 +153,12 @@ class Bottleneck(nn.Module):
             else:
                 raise NotImplementedError("Unregistered mask type!")
 
-    def forward_conv(self, x, conv1_mask):
+    def forward_conv(self, x, conv1_mask=None):
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
 
-        if conv1_mask:
+        if conv1_mask is not None:
             out = out * conv1_mask.unsqueeze(dim=1)
             if self.conv2.stride[0] == 2:
                 conv1_mask = self.mask_sampler(conv1_mask)
@@ -191,13 +191,16 @@ class Bottleneck(nn.Module):
             identity = self.downsample(x)
 
         if not self.sparse:
-            if self.input_resolution:
-                mask = self.mask.process(x, 1,  meta["stage_id"])
-                out, mask = self.forward_conv(x, mask)
+            if not isinstance(self.mask, NoneMask):
+                if self.input_resolution:
+                    mask = self.mask.process(x, 1,  meta["stage_id"])
+                    out, mask = self.forward_conv(x, mask)
+                else:
+                    mask = self.mask.process(x, self.conv2.stride[0] != 1,  meta["stage_id"])
+                    out, _ = self.forward_conv(x, mask)
+                out = out * mask.unsqueeze(dim=1)
             else:
-                mask = self.mask.process(x, self.conv2.stride[0] != 1,  meta["stage_id"])
-                out, _ = self.forward_conv(x, mask)
-            out = out * mask.unsqueeze(dim=1)
+                out, _ = self.forward_conv(x)
             meta["block_id"] += 1
 
             if self.save_feat:
