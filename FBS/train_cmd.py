@@ -1,7 +1,10 @@
 #-*-coding:utf-8-*-
 
 cmds = [
-    "python main_imagenet.py -e --group_size 64 --load exp/channel/first/checkpoint.pth --dataset-root /media/hkuit164/Elements1/imagenet --budget 0.5 --workers 0 --model resnet50 --model_cfg hardware --mask_type fc"
+    "CUDA_VISIBLE_DEVICES=0 python main_imagenet.py --group_size 64 --budget 0.25 --model resnet50 --model_cfg hardware --mask_type fc --target_stage 2 3 --pooling_method ave --dataset-root /media/hkuit164/Elements1/imagenet -s exp/channel/s25_ave_stage23 --load ",
+    "CUDA_VISIBLE_DEVICES=0 python main_imagenet.py --group_size 64 --budget 0.25 --model resnet50 --model_cfg hardware --mask_type fc --target_stage 2 3 --pooling_method ave --dataset-root /media/hkuit164/Elements1/imagenet -s exp/channel/s25_max_stage23 --load ",
+    "CUDA_VISIBLE_DEVICES=0 python main_imagenet.py --group_size 64 --budget 0.5 --model resnet50 --model_cfg hardware --mask_type fc --target_stage 2 3 --pooling_method max --dataset-root /media/hkuit164/Elements1/imagenet -s exp/channel/s50_ave_stage23 --load ",
+    "CUDA_VISIBLE_DEVICES=0 python main_imagenet.py --group_size 64 --budget 0.5 --model resnet50 --model_cfg hardware --mask_type fc --target_stage 2 3 --pooling_method ave --dataset-root /media/hkuit164/Elements1/imagenet -s exp/channel/s50_max_stage23 --load ",
 ]
 
 import os
