@@ -4,9 +4,11 @@ import torch
 
 
 class ChannelVectorUnit(nn.Module):
-    def __init__(self, in_channels, out_channels, group_size=1, pooling_method="ave", budget=1.0, **kwargs):
+    def __init__(self, in_channels, out_channels, group_size=1, pooling_method="ave", budget=1.0, target_stage=[-1],
+                 **kwargs):
         super(ChannelVectorUnit, self).__init__()
         self.pooling = nn.AdaptiveMaxPool2d(1) if pooling_method == "max" else nn.AdaptiveAvgPool2d(1)
+        self.out_channels = out_channels
         self.group_size = group_size
         assert out_channels % group_size == 0, "The channels are not grouped with the same size"
         self.sigmoid = nn.Sigmoid()
@@ -14,8 +16,11 @@ class ChannelVectorUnit(nn.Module):
         nn.init.kaiming_normal_(self.channel_saliency_predictor.weight, mode='fan_out', nonlinearity='relu')
         nn.init.constant_(self.channel_saliency_predictor.bias, 1.)
         self.sparsity = budget
+        self.target_stage = target_stage
 
     def forward(self, x, meta):
+        if meta["stage_id"] not in self.target_stage:
+            return torch.ones(x.shape[0], self.out_channels).cuda()
         x = self.pooling(x).squeeze()
         x = self.channel_saliency_predictor(x)
         x = self.sigmoid(x)

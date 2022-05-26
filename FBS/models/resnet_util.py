@@ -183,7 +183,6 @@ class Bottleneck(nn.Module):
                 mask = self.mask.process(x, self.conv2.stride[0] != 1,  meta["stage_id"])
                 out, _ = self.forward_conv(x, mask)
             out = out * mask.unsqueeze(dim=1)
-            meta["block_id"] += 1
 
             if self.save_feat:
                 meta["feat_before"].append(out)
@@ -207,6 +206,7 @@ class Bottleneck(nn.Module):
             out += identity
 
         out = self.relu(out)
+        meta["block_id"] += 1
         meta["masked_feat"] = self.get_masked_feature(out)
         return out, meta
 
