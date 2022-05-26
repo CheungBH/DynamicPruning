@@ -64,6 +64,7 @@ def main():
     parser.add_argument('--channel_budget', default=-1, type=float, help='computational budget (between 0 and 1) (-1 for no sparsity)')
     parser.add_argument('--channel_unit_type', type=str, default='fc', help='Type of mask')
     parser.add_argument('--channel_stage', nargs="+", type=int, help='target stage for pretrain mask')
+    parser.add_argument('--lasso_lambda', type=float, default=1e-8)
 
     # model
     parser.add_argument('--model', type=str, default='resnet101', help='network model name')
@@ -375,7 +376,8 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
         # compute gradient and do SGD step
         optimizer.zero_grad()
         loss = s_loss + t_loss if s_loss else t_loss
-
+        if 0 < args.channel_budget < 1:
+            loss += args.lasso_lambda * meta["lasso_sum"]
         if mix_precision:
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
