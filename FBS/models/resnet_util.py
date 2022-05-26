@@ -155,7 +155,7 @@ class Bottleneck(nn.Module):
         out = self.bn3(out)
         return out, conv1_mask
 
-    def obtain_vector(self, meta):
+    def obtain_vector(self, x, meta):
         if self.resolution_mask:
             raise NotImplementedError
             # if self.mask_block:
@@ -166,7 +166,7 @@ class Bottleneck(nn.Module):
             #     else:
             #         m = meta["masks"][-1]
         else:
-            vector = self.saliency(meta["masked_feat"], meta)
+            vector = self.saliency(x, meta)
         return vector
 
     def forward(self, input):
@@ -191,7 +191,7 @@ class Bottleneck(nn.Module):
                 meta["feat_after"].append(out)
         else:
             assert meta is not None
-            vector = self.obtain_vector(meta)
+            vector = self.obtain_vector(x, meta)
 
             out = conv_forward(self.conv1, x, out_vec=vector)
             out = bn_relu_foward(self.bn1, self.relu, out, vector)
@@ -212,7 +212,7 @@ class Bottleneck(nn.Module):
 
     def get_masked_feature(self, x, mask=None):
         if mask is None:
-            return x
+            return torch.ones(x.shape[0], 1, x.shape[-2], x.shape[-1]).cuda()
         else:
             raise NotImplementedError
 

@@ -3,11 +3,24 @@ import math
 import torch
 
 
+class MaskedAvePooling(nn.Module):
+    def __init__(self, size=1):
+        super(MaskedAvePooling, self).__init__()
+        self.pooling = nn.AdaptiveAvgPool2d(size)
+
+    def forward(self, x, mask):
+        pooled_feat = self.pooling(x * mask.expand_as(x))
+        total_pixel_num = mask.shape[-1] * mask.shape[-2]
+        active_pixel_num = mask.view(x.shape[0], -1).sum(dim=1)
+        active_mask = active_pixel_num.unsqueeze(dim=1).unsqueeze(dim=1).unsqueeze(dim=1).expand_as(pooled_feat)
+        return (pooled_feat * total_pixel_num)/active_mask
+
+
 class ChannelVectorUnit(nn.Module):
     def __init__(self, in_channels, out_channels, group_size=1, pooling_method="ave", budget=1.0, target_stage=[-1],
                  **kwargs):
         super(ChannelVectorUnit, self).__init__()
-        self.pooling = nn.AdaptiveMaxPool2d(1) if pooling_method == "max" else nn.AdaptiveAvgPool2d(1)
+        self.pooling = nn.AdaptiveMaxPool2d(1) if pooling_method == "max" else MaskedAvePooling()
         self.out_channels = out_channels
         self.group_size = group_size
         assert out_channels % group_size == 0, "The channels are not grouped with the same size"
@@ -21,7 +34,10 @@ class ChannelVectorUnit(nn.Module):
     def forward(self, x, meta):
         if meta["stage_id"] not in self.target_stage:
             return torch.ones(x.shape[0], self.out_channels).cuda()
-        x = self.pooling(x).squeeze()
+        if isinstance(self.pooling, MaskedAvePooling):
+            x = self.pooling(x, meta["masked_feat"]).squeeze()
+        else:
+            x = self.pooling(x).squeeze()
         x = self.channel_saliency_predictor(x)
         x = self.sigmoid(x)
         meta["lasso_sum"] += torch.mean(torch.sum(x, dim=-1))
