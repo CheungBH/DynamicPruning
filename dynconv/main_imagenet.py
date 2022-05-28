@@ -424,7 +424,7 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
 
             # compute output
             meta = {'masks': [], 'device': device, 'gumbel_temp': 1.0, 'gumbel_noise': False, 'epoch': epoch,
-                    "feat_before": [], "feat_after": []}
+                    "feat_before": [], "feat_after": [], "lasso_sum": 0}
             output, meta = model(input, meta)
             output = output.float()
             t_loss, s_loss, layer_percents = criterion(output, target, meta, phase="")
