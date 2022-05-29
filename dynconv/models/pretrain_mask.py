@@ -11,12 +11,12 @@ class ZeroRatioMask:
         bs, c, h, w = feat.shape
         zero_mask = torch.sum((feat == 0).int(), dim=1)
         soft_mask = torch.true_divide(zero_mask, c)
-        if stride:
-            soft_mask = nn.functional.upsample_nearest(soft_mask.unsqueeze(dim=1), size=(int(h/2), int(w/2)))
+        soft_mask = nn.functional.upsample_nearest(soft_mask.unsqueeze(dim=1), size=(int(h/stride), int(w/stride)))
+        soft_mask = soft_mask.squeeze()
         if curr_block not in self.target_stage:
             return torch.ones_like(soft_mask)
         else:
-            return (soft_mask <= self.threshold).int()
+            return (soft_mask <= self.threshold).float()
 
 
 class ZeroRatioTopMask:
