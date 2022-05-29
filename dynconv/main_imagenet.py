@@ -155,6 +155,12 @@ def main():
                 iteration += 1
             return task_loss, sparse_loss, layer_percents
 
+    tb_folder = os.path.join(args.save_dir, "tb") if not args.evaluate else ""
+    criterion = Loss(args.budget, net_weight=args.net_weight, block_weight=args.layer_weight, num_epochs=args.epochs,
+                     strategy=args.sparse_strategy, valid_range=args.valid_range, static_range=args.static_range,
+                     tensorboard_folder=tb_folder, unlimited_lower=args.unlimited_lower,
+                     layer_loss_method=args.layer_loss_method)
+
     if not args.evaluate:
         transform_train = transforms.Compose([
                 transforms.RandomResizedCrop(res),
@@ -168,10 +174,8 @@ def main():
         ## DATA
         trainset = dataloader.imagenet.IN1K(root=args.dataset_root, split='train', transform=transform_train)
         train_loader = torch.utils.data.DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=args.workers, pin_memory=False)
-        tb_folder = os.path.join(args.save_dir, "tb")
         args.feat_save_dir = ""
     else:
-        tb_folder = ""
         if args.plot_save_dir:
             os.makedirs(args.plot_save_dir, exist_ok=True)
             args.batchsize = 1
@@ -195,11 +199,6 @@ def main():
         f.write(cmd + "\n")
         print('Args:', args, file=f)
         f.write("\n")
-
-    criterion = Loss(args.budget, net_weight=args.net_weight, block_weight=args.layer_weight, num_epochs=args.epochs,
-                     strategy=args.sparse_strategy, valid_range=args.valid_range, static_range=args.static_range,
-                     tensorboard_folder=tb_folder, unlimited_lower=args.unlimited_lower,
-                     layer_loss_method=args.layer_loss_method)
 
     ## OPTIMIZER
     if args.optim == "sgd":
