@@ -82,6 +82,8 @@ def main():
     parser.add_argument('--random_mask_stage', nargs="+", type=int, default=[-1], help='target stage for pretrain mask')
     parser.add_argument('--individual_forward', action='store_true', help='for stat mask: Treating each sample individually')
     parser.add_argument('--skip_layer_thresh', default=0, type=float, help='The numerical threshold of mask')
+    parser.add_argument('--dropout_stages', nargs="+", type=int, default=[-1], help='target stage for pretrain mask')
+    parser.add_argument('--dropout_ratio', default=0, type=float, help='The numerical threshold of mask')
 
     # file management
     parser.add_argument('-s', '--save_dir', type=str, default='', help='directory to save model')
@@ -116,7 +118,8 @@ def main():
                        random_mask_stage=args.random_mask_stage, skip_layer_thresh=args.skip_layer_thresh,
                        input_resolution=args.input_resolution, conv1_act=args.conv1_act, group_size=args.group_size,
                        pooling_method=args.pooling_method, channel_budget=args.channel_budget,
-                       channel_unit_type=args.channel_unit_type, channel_stage=args.channel_stage).to(device=device)
+                       channel_unit_type=args.channel_unit_type, channel_stage=args.channel_stage,
+                       dropout_stages=args.dropout_stages, dropout_ratio=args.dropout_ratio).to(device=device)
 
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0,
             "feat_before": [], "feat_after": [], "lasso_sum": 0}

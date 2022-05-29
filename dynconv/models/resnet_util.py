@@ -87,7 +87,7 @@ class Bottleneck(nn.Module):
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1, base_width=64, dilation=1,
                  norm_layer=None, sparse=False, resolution_mask=False, mask_block=False, mask_type="conv",
                  save_feat=False, input_resolution=False, conv1_act="relu", channel_budget=-1, channel_unit_type="fc",
-                 group_size=1, **kwargs):
+                 group_size=1, dropout_ratio=0, dropout_stages=[-1], **kwargs):
         super(Bottleneck, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
@@ -122,6 +122,8 @@ class Bottleneck(nn.Module):
         self.input_resolution = input_resolution
         self.mask_sampler = nn.MaxPool2d(kernel_size=2)
         self.channel_budget = channel_budget
+        self.dropout_ratio = dropout_ratio
+        self.dropout_stages = dropout_stages
 
         if sparse:
             if channel_budget >= 0:
@@ -200,6 +202,13 @@ class Bottleneck(nn.Module):
             vector = self.saliency(x, meta)
         return vector
 
+    def add_dropout(self, x, meta):
+        if meta["stage_id"] in self.dropout_stages and 0 < self.dropout_ratio < 1:
+            # test = (torch.rand_like(x) > self.dropout_ratio).int()
+            return (torch.rand_like(x) > self.dropout_ratio).int() * x
+        else:
+            return x
+
     def forward(self, input):
         x, meta = input
         identity = x
@@ -227,7 +236,7 @@ class Bottleneck(nn.Module):
         else:
             assert meta is not None
             meta["stride"] = self.stride
-            m = self.obtain_mask(x, meta)
+            m = self.obtain_mask(self.add_dropout(x.clone(), meta), meta)
             mask_dilate, mask = m['dilate'], m['std']
 
             if self.channel_budget > 0:
