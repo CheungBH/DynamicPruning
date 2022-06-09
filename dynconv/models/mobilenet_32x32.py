@@ -68,13 +68,13 @@ class InvertedResidual(nn.Module):
 
 class InvertedResidualBlock(nn.Module):
     def __init__(self, inp, oup, stride, expand_ratio, norm_layer=None, sparse=False, resolution_mask=False,
-                 mask_block=False, mask_type="conv", final_activation="linear", use_downsample=False, **kwargs):
+                 mask_block=False, mask_type="conv", final_activation="linear", downsample=False, **kwargs):
         super(InvertedResidualBlock, self).__init__()
         self.stride = stride
         assert stride in [1, 2]
         self.sparse = sparse
         self.use_res_connect = self.stride == 1 and inp == oup
-        self.use_downsample = use_downsample
+        self.downsample = downsample
 
         self.resolution_mask = resolution_mask
         self.mask_block = mask_block
@@ -110,20 +110,17 @@ class InvertedResidualBlock(nn.Module):
         self.bn2 = norm_layer(oup)
         self.final_activation = final_activation
 
-    def forward_with_mask(self, x):
+    def forward_basic(self, x):
         if self.squeeze:
             x = self.activation(self.bn1(self.conv_pw_1(x)))
         x = self.activation(self.bn_dw(self.conv3x3_dw(x)))
         x = self.bn2(self.conv_pw_2(x))
         return x
 
-    def forward_basic(self, inp):
+    def forward_block(self, inp):
         x, meta = inp
         if (not self.sparse) or (not self.use_res_connect):
-            if self.squeeze:
-                x = self.activation(self.bn1(self.conv_pw_1(x)))
-            x = self.activation(self.bn_dw(self.conv3x3_dw(x)))
-            x = self.bn2(self.conv_pw_2(x))
+            x = self.forward_basic(x)
         else:
             if self.resolution_mask:
                 if self.mask_block == 1:
@@ -147,17 +144,16 @@ class InvertedResidualBlock(nn.Module):
 
     def forward(self, inp):
         x, meta = inp
-        out = self.forward_basic(inp)
+        identity = x
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
+        out = self.forward_block(inp)
         if self.final_activation == "linear":
-            if self.use_res_connect:
-                return (x + out[0], out[1])
-            else:
-                return out
+            return (identity + out[0], out[1]) if self.use_res_connect else out
         elif self.final_activation == "relu":
-            if self.use_res_connect:
-                return self.activation(x + out[0]), out[1]
-            else:
-                return self.activation(out[0]), out[1]
+            return self.activation(identity + out[0]), out[1] if self.use_res_connect \
+                else self.activation(out[0]), out[1]
         else:
             raise NotImplementedError
 
