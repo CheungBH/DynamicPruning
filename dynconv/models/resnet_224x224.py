@@ -51,20 +51,20 @@ class ResNet(nn.Module):
                              "or a 3-element tuple, got {}".format(replace_stride_with_dilation))
         self.groups = groups
         self.base_width = width_per_group
-        if model_cfg == "hardware" or model_cfg == "hardware_2048":
+        if "hardware" in model_cfg:
             self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=3, stride=2, padding=1, bias=False)
         else:
             self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layer(block, int(64*width_mult), layers[0], **kwargs)
+        self.layer1 = self._make_layer(block, int(64*width_mult), layers[0], model_cfg=model_cfg, current_stage=0, **kwargs)
         self.layer2 = self._make_layer(block, int(128*width_mult), layers[1], stride=2,
-                                       dilate=replace_stride_with_dilation[0], **kwargs)
+                                       dilate=replace_stride_with_dilation[0], model_cfg=model_cfg, current_stage=1, **kwargs)
         self.layer3 = self._make_layer(block, int(256*width_mult), layers[2], stride=2,
-                                       dilate=replace_stride_with_dilation[1], **kwargs)
+                                       dilate=replace_stride_with_dilation[1], model_cfg=model_cfg, current_stage=2, **kwargs)
         self.layer4 = self._make_layer(block, int(512*width_mult), layers[3], stride=2,
-                                       dilate=replace_stride_with_dilation[2], model_cfg=model_cfg, **kwargs)
+                                       dilate=replace_stride_with_dilation[2], model_cfg=model_cfg, current_stage=3, **kwargs)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         if model_cfg == "hardware":
             self.fc = nn.Linear(int(512*width_mult * 2), num_classes)
@@ -85,10 +85,16 @@ class ResNet(nn.Module):
                 elif isinstance(m, BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
 
-    def _make_layer(self, block, planes, blocks, stride=1, dilate=False, model_cfg="baseline", **kwargs):
+    def _make_layer(self, block, planes, blocks, stride=1, dilate=False, model_cfg="baseline",
+                    current_stage=-1, **kwargs):
         norm_layer = self._norm_layer
-        if model_cfg == "hardware":
+        base_width = self.base_width
+        if model_cfg == "hardware" and current_stage == 3:
             block.expansion = 2
+        elif model_cfg == "hardware_static_s50_bl" and current_stage in [2, 3]:
+            base_width *= 0.5
+        elif model_cfg == "hardware_static_s75_bl" and current_stage in [2, 3]:
+            base_width *= 0.75
         downsample = None
         previous_dilation = self.dilation
         if dilate:
@@ -101,11 +107,11 @@ class ResNet(nn.Module):
             )
 
         layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample, self.groups, self.base_width,
+        layers.append(block(self.inplanes, planes, stride, downsample, self.groups, base_width,
                             previous_dilation, norm_layer, sparse=self.sparse, mask_block=True, **kwargs))
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes, groups=self.groups, base_width=self.base_width,
+            layers.append(block(self.inplanes, planes, groups=self.groups, base_width=base_width,
                                 dilation=self.dilation, norm_layer=norm_layer, sparse=self.sparse,
                                 mask_block=False, **kwargs))
 
