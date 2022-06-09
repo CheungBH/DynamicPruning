@@ -144,7 +144,7 @@ class MobileNetV2(nn.Module):
             for i in range(n):
                 stride = s if i == 0 else 1
                 mask_block = int((s == 2 and i == 1))
-                if use_downsample and s == 2:
+                if use_downsample and (s == 2 or input_channel != output_channel):
                     downsample = nn.Sequential(
                         nn.Conv2d(input_channel, output_channel, kernel_size=1, stride=stride, bias=False),
                         norm_layer(output_channel),
@@ -180,6 +180,7 @@ class MobileNetV2(nn.Module):
                 nn.init.zeros_(m.bias)
 
     def forward(self, x, meta):
+        meta["block_id"] = 0
         x = self.first_conv(x)
         x, meta = self.features((x, meta))
         x = self.final_conv(x)

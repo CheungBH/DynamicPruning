@@ -73,7 +73,7 @@ class InvertedResidualBlock(nn.Module):
         self.stride = stride
         assert stride in [1, 2]
         self.sparse = sparse
-        self.use_res_connect = self.stride == 1 and inp == oup
+        self.use_res_connect = (self.stride == 1 and inp == oup) if downsample is None else True
         self.downsample = downsample
 
         self.resolution_mask = resolution_mask
@@ -149,11 +149,12 @@ class InvertedResidualBlock(nn.Module):
             identity = self.downsample(x)
 
         out = self.forward_block(inp)
+        meta["block_id"] += 1
         if self.final_activation == "linear":
             return (identity + out[0], out[1]) if self.use_res_connect else out
         elif self.final_activation == "relu":
-            return self.activation(identity + out[0]), out[1] if self.use_res_connect \
-                else self.activation(out[0]), out[1]
+            return (self.activation(identity + out[0]), out[1]) if self.use_res_connect \
+                else (self.activation(out[0]), out[1])
         else:
             raise NotImplementedError
 
@@ -247,6 +248,7 @@ class MobileNetV2_32x32(nn.Module):
                 nn.init.zeros_(m.bias)
 
     def forward(self, x, meta):
+        meta["block_id"] = 0
         x = self.first_conv(x)
         x, meta = self.features((x, meta))
         x = self.final_conv(x)
