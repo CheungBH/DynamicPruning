@@ -80,6 +80,7 @@ class InvertedResidualBlock(nn.Module):
 
         self.resolution_mask = resolution_mask
         self.mask_block = mask_block
+        self.input_resolution = input_resolution
         if self.sparse and self.use_res_connect:
             if self.resolution_mask:
                 if self.mask_block:
@@ -127,11 +128,11 @@ class InvertedResidualBlock(nn.Module):
         x = self.bn2(self.conv_pw_2(x))
         return x
 
-    def add_dropout(self, x, meta):
-        if meta["stage_id"] in self.dropout_stages and 0 < self.dropout_ratio < 1:
-            return (torch.rand_like(x) > self.dropout_ratio).int() * x
-        else:
-            return x
+    # def add_dropout(self, x, meta):
+    #     if meta["stage_id"] in self.dropout_stages and 0 < self.dropout_ratio < 1:
+    #         return (torch.rand_like(x) > self.dropout_ratio).int() * x
+    #     else:
+    #         return x
 
     def obtain_mask(self, x, meta):
         if self.resolution_mask:
@@ -151,7 +152,8 @@ class InvertedResidualBlock(nn.Module):
         if (not self.sparse) or (not self.use_res_connect):
             x = self.forward_basic(x)
         else:
-            m = self.obtain_mask(self.add_dropout(x.clone(), meta), meta)
+            meta["stride"] = self.stride
+            m = self.obtain_mask(x, meta)
             mask_dilate, mask = m['dilate'], m['std']
 
             if self.squeeze:

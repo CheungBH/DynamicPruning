@@ -180,7 +180,7 @@ class MobileNetV2(nn.Module):
                 nn.init.zeros_(m.bias)
 
     def forward(self, x, meta):
-        meta["block_id"] = 0
+        meta["block_id"], meta["stage_id"] = 0, 0
         x = self.first_conv(x)
         x, meta = self.features((x, meta))
         x = self.final_conv(x)
