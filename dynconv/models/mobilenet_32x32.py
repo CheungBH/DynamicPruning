@@ -1,5 +1,6 @@
 from torch import nn
 import dynconv
+import torch
 
 
 def _make_divisible(v, divisor, min_value=None):
@@ -68,7 +69,8 @@ class InvertedResidual(nn.Module):
 
 class InvertedResidualBlock(nn.Module):
     def __init__(self, inp, oup, stride, expand_ratio, norm_layer=None, sparse=False, resolution_mask=False,
-                 mask_block=False, mask_type="conv", final_activation="linear", downsample=False, **kwargs):
+                 mask_block=False, mask_type="conv", final_activation="linear", downsample=False,
+                 input_resolution=False, dropout_ratio=0, dropout_stages=[-1], **kwargs):
         super(InvertedResidualBlock, self).__init__()
         self.stride = stride
         assert stride in [1, 2]
@@ -84,8 +86,13 @@ class InvertedResidualBlock(nn.Module):
                     self.masker = dynconv.MaskUnit(channels=inp, stride=stride, dilate_stride=1)
             else:
                 if mask_type == "conv":
-                    self.masker = dynconv.MaskUnit(channels=inp, stride=stride, dilate_stride=1, **kwargs)
+                    if not input_resolution:
+                        self.masker = dynconv.MaskUnit(channels=inp, stride=stride, dilate_stride=1, **kwargs)
+                    else:
+                        self.masker = dynconv.MaskUnit(channels=inp, stride=1, dilate_stride=1,
+                                                       input_resolution=True, **kwargs)
                 elif mask_type == "stat":
+                    raise NotImplementedError
                     self.masker = dynconv.StatMaskUnit(stride=stride, dilate_stride=1)
                 elif mask_type == "stat_mom":
                     self.masker = dynconv.StatMaskUnitMom(stride=stride, dilate_stride=1, **kwargs)
@@ -110,6 +117,9 @@ class InvertedResidualBlock(nn.Module):
         self.bn2 = norm_layer(oup)
         self.final_activation = final_activation
 
+        self.dropout_ratio = dropout_ratio
+        self.dropout_stages = dropout_stages
+
     def forward_basic(self, x):
         if self.squeeze:
             x = self.activation(self.bn1(self.conv_pw_1(x)))
@@ -117,24 +127,37 @@ class InvertedResidualBlock(nn.Module):
         x = self.bn2(self.conv_pw_2(x))
         return x
 
+    def add_dropout(self, x, meta):
+        if meta["stage_id"] in self.dropout_stages and 0 < self.dropout_ratio < 1:
+            return (torch.rand_like(x) > self.dropout_ratio).int() * x
+        else:
+            return x
+
+    def obtain_mask(self, x, meta):
+        if self.resolution_mask:
+            if self.mask_block:
+                m = self.masker(x, meta)
+            else:
+                if self.input_resolution:
+                    m = {"dilate": meta["masks"][-1]["std"], "std": meta["masks"][-1]["std"]}
+                else:
+                    m = meta["masks"][-1]
+        else:
+            m = self.masker(x, meta)
+        return m
+
     def forward_block(self, inp):
         x, meta = inp
         if (not self.sparse) or (not self.use_res_connect):
             x = self.forward_basic(x)
         else:
-            if self.resolution_mask:
-                if self.mask_block == 1:
-                    m = self.masker(x, meta)
-                else:
-                    m = meta["masks"][-1]
-            else:
-                m = self.masker(x, meta)
-
+            m = self.obtain_mask(self.add_dropout(x.clone(), meta), meta)
             mask_dilate, mask = m['dilate'], m['std']
 
             if self.squeeze:
                 x = dynconv.conv1x1(self.conv_pw_1, x, mask, mask_dilate)
                 x = dynconv.bn_relu(self.bn1, self.activation, x, mask_dilate)
+                x = dynconv.apply_mask(x, mask_dilate) if self.input_resolution else x
             x = dynconv.conv3x3_dw(self.conv3x3_dw, x, mask_dilate, mask)
             x = dynconv.bn_relu(self.bn_dw, self.activation, x, mask)
             x = dynconv.conv1x1(self.conv_pw_2, x, mask_dilate, mask)
