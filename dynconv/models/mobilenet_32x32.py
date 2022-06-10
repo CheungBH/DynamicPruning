@@ -103,13 +103,10 @@ class InvertedResidualBlock(nn.Module):
 
         hidden_dim = int(round(inp * expand_ratio))
 
-        self.squeeze = False
         self.activation = nn.ReLU(inplace=True)
 
-        if expand_ratio != 1:
-            self.squeeze = True
-            self.conv_pw_1 = nn.Conv2d(inp, hidden_dim, kernel_size=1, stride=1, padding=0, bias=False)
-            self.bn1 = norm_layer(hidden_dim)
+        self.conv_pw_1 = nn.Conv2d(inp, hidden_dim, kernel_size=1, stride=1, padding=0, bias=False)
+        self.bn1 = norm_layer(hidden_dim)
 
         self.conv3x3_dw = nn.Conv2d(hidden_dim, hidden_dim, kernel_size=3, stride=stride, padding=1, groups=hidden_dim, bias=False)
         self.bn_dw = norm_layer(hidden_dim)
@@ -122,8 +119,7 @@ class InvertedResidualBlock(nn.Module):
         self.dropout_stages = dropout_stages
 
     def forward_basic(self, x):
-        if self.squeeze:
-            x = self.activation(self.bn1(self.conv_pw_1(x)))
+        x = self.activation(self.bn1(self.conv_pw_1(x)))
         x = self.activation(self.bn_dw(self.conv3x3_dw(x)))
         x = self.bn2(self.conv_pw_2(x))
         return x
@@ -156,10 +152,9 @@ class InvertedResidualBlock(nn.Module):
             m = self.obtain_mask(x, meta)
             mask_dilate, mask = m['dilate'], m['std']
 
-            if self.squeeze:
-                x = dynconv.conv1x1(self.conv_pw_1, x, mask, mask_dilate)
-                x = dynconv.bn_relu(self.bn1, self.activation, x, mask_dilate)
-                x = dynconv.apply_mask(x, mask_dilate) if self.input_resolution else x
+            x = dynconv.conv1x1(self.conv_pw_1, x, mask, mask_dilate)
+            x = dynconv.bn_relu(self.bn1, self.activation, x, mask_dilate)
+            x = dynconv.apply_mask(x, mask_dilate) if self.input_resolution else x
             x = dynconv.conv3x3_dw(self.conv3x3_dw, x, mask_dilate, mask)
             x = dynconv.bn_relu(self.bn_dw, self.activation, x, mask)
             x = dynconv.conv1x1(self.conv_pw_2, x, mask_dilate, mask)

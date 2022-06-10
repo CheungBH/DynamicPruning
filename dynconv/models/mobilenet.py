@@ -124,6 +124,18 @@ class MobileNetV2(nn.Module):
                 [6, 320, 1, 1],
             ]
             last_channel = 1280
+        elif model_cfg == "baseline_full":
+            inverted_residual_setting = [
+                # t, c, n, s
+                [6, 16, 1, 1],
+                [6, 24, 2, 2],
+                [6, 32, 3, 2],
+                [6, 64, 4, 2],
+                [6, 96, 3, 1],
+                [6, 160, 3, 2],
+                [6, 320, 1, 1],
+            ]
+            last_channel = 1280
         else:
             raise NotImplementedError
 
