@@ -1,5 +1,6 @@
 from torch import nn
-# import dynconv
+from models.channel_saliency import conv_forward, bn_relu_foward, channel_process, ChannelVectorUnit
+import torch
 
 
 def _make_divisible(v, divisor, min_value=None):
@@ -68,40 +69,30 @@ class InvertedResidual(nn.Module):
 
 class InvertedResidualBlock(nn.Module):
     def __init__(self, inp, oup, stride, expand_ratio, norm_layer=None, sparse=False, resolution_mask=False,
-                 mask_block=False, mask_type="conv", final_activation="linear", use_downsample=False, **kwargs):
+                 mask_block=False, mask_type="conv", final_activation="linear", downsample=False,
+                 input_resolution=False, dropout_ratio=0, dropout_stages=[-1], group_size=64, budget=-1, **kwargs):
         super(InvertedResidualBlock, self).__init__()
         self.stride = stride
         assert stride in [1, 2]
         self.sparse = sparse
-        self.use_res_connect = self.stride == 1 and inp == oup
-        self.use_downsample = use_downsample
-
+        self.budget = budget
+        self.use_res_connect = (self.stride == 1 and inp == oup) if downsample is None else True
+        self.downsample = downsample
+        hidden_dim = int(round(inp * expand_ratio))
         self.resolution_mask = resolution_mask
         self.mask_block = mask_block
-        if self.sparse and self.use_res_connect:
-            if self.resolution_mask:
-                if self.mask_block:
-                    self.masker = dynconv.MaskUnit(channels=inp, stride=stride, dilate_stride=1)
-            else:
-                if mask_type == "conv":
-                    self.masker = dynconv.MaskUnit(channels=inp, stride=stride, dilate_stride=1, **kwargs)
-                elif mask_type == "stat":
-                    self.masker = dynconv.StatMaskUnit(stride=stride, dilate_stride=1)
-                elif mask_type == "stat_mom":
-                    self.masker = dynconv.StatMaskUnitMom(stride=stride, dilate_stride=1, **kwargs)
-
+        self.input_resolution = input_resolution
+        if self.sparse:
+            if mask_type == "fc":
+                self.saliency = ChannelVectorUnit(in_channels=inp, out_channels=hidden_dim,
+                                                  group_size=group_size, budget=self.budget, **kwargs)
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
 
-        hidden_dim = int(round(inp * expand_ratio))
-
-        self.squeeze = False
         self.activation = nn.ReLU(inplace=True)
 
-        if expand_ratio != 1:
-            self.squeeze = True
-            self.conv_pw_1 = nn.Conv2d(inp, hidden_dim, kernel_size=1, stride=1, padding=0, bias=False)
-            self.bn1 = norm_layer(hidden_dim)
+        self.conv_pw_1 = nn.Conv2d(inp, hidden_dim, kernel_size=1, stride=1, padding=0, bias=False)
+        self.bn1 = norm_layer(hidden_dim)
 
         self.conv3x3_dw = nn.Conv2d(hidden_dim, hidden_dim, kernel_size=3, stride=stride, padding=1, groups=hidden_dim, bias=False)
         self.bn_dw = norm_layer(hidden_dim)
@@ -110,54 +101,67 @@ class InvertedResidualBlock(nn.Module):
         self.bn2 = norm_layer(oup)
         self.final_activation = final_activation
 
-    def forward_with_mask(self, x):
-        if self.squeeze:
-            x = self.activation(self.bn1(self.conv_pw_1(x)))
+        self.dropout_ratio = dropout_ratio
+        self.dropout_stages = dropout_stages
+
+    def forward_basic(self, x):
+        x = self.activation(self.bn1(self.conv_pw_1(x)))
         x = self.activation(self.bn_dw(self.conv3x3_dw(x)))
         x = self.bn2(self.conv_pw_2(x))
         return x
 
-    def forward_basic(self, inp):
-        x, meta = inp
-        if (not self.sparse) or (not self.use_res_connect):
-            if self.squeeze:
-                x = self.activation(self.bn1(self.conv_pw_1(x)))
-            x = self.activation(self.bn_dw(self.conv3x3_dw(x)))
-            x = self.bn2(self.conv_pw_2(x))
-        else:
-            if self.resolution_mask:
-                if self.mask_block == 1:
-                    m = self.masker(x, meta)
+    # def add_dropout(self, x, meta):
+    #     if meta["stage_id"] in self.dropout_stages and 0 < self.dropout_ratio < 1:
+    #         return (torch.rand_like(x) > self.dropout_ratio).int() * x
+    #     else:
+    #         return x
+
+    def obtain_mask(self, x, meta):
+        if self.resolution_mask:
+            if self.mask_block:
+                m = self.masker(x, meta)
+            else:
+                if self.input_resolution:
+                    m = {"dilate": meta["masks"][-1]["std"], "std": meta["masks"][-1]["std"]}
                 else:
                     m = meta["masks"][-1]
-            else:
-                m = self.masker(x, meta)
+        else:
+            m = self.masker(x, meta)
+        return m
 
-            mask_dilate, mask = m['dilate'], m['std']
+    def forward_block(self, inp):
+        x, meta = inp
+        if (not self.sparse) or (not self.use_res_connect):
+            x = self.forward_basic(x)
+        else:
+            vector = self.saliency(x, meta)
 
-            if self.squeeze:
-                x = dynconv.conv1x1(self.conv_pw_1, x, mask, mask_dilate)
-                x = dynconv.bn_relu(self.bn1, self.activation, x, mask_dilate)
-            x = dynconv.conv3x3_dw(self.conv3x3_dw, x, mask_dilate, mask)
-            x = dynconv.bn_relu(self.bn_dw, self.activation, x, mask)
-            x = dynconv.conv1x1(self.conv_pw_2, x, mask_dilate, mask)
-            x = dynconv.bn_relu(self.bn2, None, x, mask)
-            x = dynconv.apply_mask(x, mask)
+            x = conv_forward(self.conv_pw_1, x, out_vec=vector)
+            x = bn_relu_foward(self.bn1, self.activation, x, vector)
+            x = channel_process(x, vector)
+
+            x = conv_forward(self.conv3x3_dw, x, inp_vec=vector, out_vec=vector)
+            x = bn_relu_foward(self.bn_dw, self.activation, x, vector)
+            x = channel_process(x, vector)
+
+            x = conv_forward(self.conv_pw_2, x, inp_vec=vector)
+            x = bn_relu_foward(self.bn2, None, x)
+
         return (x, meta)
 
     def forward(self, inp):
         x, meta = inp
-        out = self.forward_basic(inp)
+        identity = x
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
+        out = self.forward_block(inp)
+        meta["block_id"] += 1
         if self.final_activation == "linear":
-            if self.use_res_connect:
-                return (x + out[0], out[1])
-            else:
-                return out
+            return (identity + out[0], out[1]) if self.use_res_connect else out
         elif self.final_activation == "relu":
-            if self.use_res_connect:
-                return self.activation(x + out[0]), out[1]
-            else:
-                return self.activation(out[0]), out[1]
+            return (self.activation(identity + out[0]), out[1]) if self.use_res_connect \
+                else (self.activation(out[0]), out[1])
         else:
             raise NotImplementedError
 
@@ -251,6 +255,7 @@ class MobileNetV2_32x32(nn.Module):
                 nn.init.zeros_(m.bias)
 
     def forward(self, x, meta):
+        meta["block_id"] = 0
         x = self.first_conv(x)
         x, meta = self.features((x, meta))
         x = self.final_conv(x)

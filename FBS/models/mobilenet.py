@@ -72,10 +72,10 @@ class MobileNetV2(nn.Module):
                  width_mult=1.0,
                  sparse=False,
                  model_cfg="",
-                 resolution_mask=False,
                  round_nearest=8,
                  block=None,
                  norm_layer=None,
+                 use_downsample=False,
                  **kwargs):
         """
         MobileNet V2 main class
@@ -124,6 +124,18 @@ class MobileNetV2(nn.Module):
                 [6, 320, 1, 1],
             ]
             last_channel = 1280
+        elif model_cfg == "baseline_full":
+            inverted_residual_setting = [
+                # t, c, n, s
+                [6, 16, 1, 1],
+                [6, 24, 2, 2],
+                [6, 32, 3, 2],
+                [6, 64, 4, 2],
+                [6, 96, 3, 1],
+                [6, 160, 3, 2],
+                [6, 320, 1, 1],
+            ]
+            last_channel = 1280
         else:
             raise NotImplementedError
 
@@ -136,7 +148,6 @@ class MobileNetV2(nn.Module):
         input_channel = _make_divisible(input_channel * width_mult, round_nearest)
         self.last_channel = _make_divisible(last_channel * max(1.0, width_mult), round_nearest)
         self.first_conv = nn.Sequential(*[ConvBNReLU(3, input_channel, stride=2, norm_layer=norm_layer)])
-        self.resolution_mask = resolution_mask
 
         features = []
         # building inverted residual blocks
@@ -145,8 +156,15 @@ class MobileNetV2(nn.Module):
             for i in range(n):
                 stride = s if i == 0 else 1
                 mask_block = int((s == 2 and i == 1))
+                if use_downsample and (s == 2 or input_channel != output_channel):
+                    downsample = nn.Sequential(
+                        nn.Conv2d(input_channel, output_channel, kernel_size=1, stride=stride, bias=False),
+                        norm_layer(output_channel),
+                    )
+                else:
+                    downsample = None
                 features.append(block(input_channel, output_channel, stride, expand_ratio=t, norm_layer=norm_layer,
-                                      sparse=sparse, resolution_mask=resolution_mask, mask_block=mask_block,  **kwargs))
+                                      sparse=sparse, mask_block=mask_block, downsample=downsample, **kwargs))
                 input_channel = output_channel
         # building last several layers
         # features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer))
@@ -175,6 +193,7 @@ class MobileNetV2(nn.Module):
 
     def forward(self, x, meta):
         x = self.first_conv(x)
+        meta["block_id"], meta["stage_id"], meta["masked_feat"] = 0, 0, x
         x, meta = self.features((x, meta))
         x = self.final_conv(x)
         # Cannot use "squeeze" as batch-size can be 1 => must use reshape with x.shape[0]
