@@ -7,6 +7,7 @@ ratios = [0.4, 0.6, 0.1, 0.25, 0.5, 0.75, 0.9]
 mask_types = ["zero_ratio", "random"]
 execute = True
 data_root = "/media/ssd0/imagenet"
+
 stages = [[0], [1], [2], [3], [0,1,2], [0,1,3], [0,2,3], [1,2,3], [0,1,2,3]]
 
 bs = 320
