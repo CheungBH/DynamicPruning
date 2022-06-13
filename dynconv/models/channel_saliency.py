@@ -14,7 +14,7 @@ class MaskedAvePooling(nn.Module):
         pooled_feat = self.pooling(x * mask.expand_as(x))
         total_pixel_num = mask.shape[-1] * mask.shape[-2]
         active_pixel_num = mask.view(x.shape[0], -1).sum(dim=1)
-        active_mask = active_pixel_num.unsqueeze(dim=1).unsqueeze(dim=1).unsqueeze(dim=1).expand_as(pooled_feat)
+        active_mask = active_pixel_num.unsqueeze(dim=1).unsqueeze(dim=1).unsqueeze(dim=1).expand_as(pooled_feat) + 1e-4
         return (pooled_feat * total_pixel_num)/active_mask
 
 
