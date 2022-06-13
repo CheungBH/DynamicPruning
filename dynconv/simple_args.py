@@ -2,9 +2,9 @@
 
 class SimpleArguments:
     def __init__(self):
-        self.data_root = ""
+        self.data_root = "/media/ssd0/imagenet"
         self.pretrain_weight = ""
-        self.load_weight = ""
+        self.load_weight = "exp/hardware_2048/checkpoint_best.pth"
 
     def update_model_args(self, idx, args):
         if idx == "hardware_resnet50":
