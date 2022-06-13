@@ -61,14 +61,23 @@ class ResNet_32x32(nn.Module):
 
         return nn.Sequential(*layers)
 
+    def refresh_layer_id(self, meta):
+        meta["stage_id"] += 1
+        meta["block_id"] = 0
+        return meta
+
     def forward(self, x, meta=None):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
 
+        meta["stage_id"], meta["block_id"], meta["masked_feat"] = 0, 0, None
         x, meta = self.layer1((x, meta))
+        self.refresh_layer_id(meta)
         x, meta = self.layer2((x, meta))
+        self.refresh_layer_id(meta)
         x, meta = self.layer3((x, meta))
+        self.refresh_layer_id(meta)
 
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
@@ -115,18 +124,24 @@ class ResNet_BN_32x32(nn.Module):
             )
 
         layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample, sparse=self.sparse, **kwargs))
+        layers.append(block(self.inplanes, planes, stride, downsample, mask_block=True, sparse=self.sparse, **kwargs))
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes, sparse=self.sparse, **kwargs))
+            layers.append(block(self.inplanes, planes, sparse=self.sparse, mask_block=False, **kwargs))
 
         return nn.Sequential(*layers)
+
+    def refresh_layer_id(self, meta):
+        meta["stage_id"] += 1
+        meta["block_id"] = 0
+        return meta
 
     def forward(self, x, meta=None):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
 
+        meta["stage_id"], meta["block_id"], meta["masked_feat"] = 0, 0, None
         x, meta = self.layer1((x, meta))
         x, meta = self.layer2((x, meta))
         x, meta = self.layer3((x, meta))
