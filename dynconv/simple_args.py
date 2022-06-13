@@ -2,7 +2,7 @@
 
 class SimpleArguments:
     def __init__(self):
-        self.data_root = "/media/ssd0/imagenet"
+        self.data_root = "/home/user/Documents/imagenet"
         self.pretrain_weight = ""
         self.load_weight = "exp/hardware_2048/checkpoint_best.pth"
 
