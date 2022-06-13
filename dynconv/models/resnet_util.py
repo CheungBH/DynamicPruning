@@ -130,6 +130,8 @@ class Bottleneck(nn.Module):
                 if channel_unit_type == "fc":
                     self.saliency = ChannelVectorUnit(in_channels=inplanes, out_channels=planes,
                                                       group_size=group_size, channel_budget=channel_budget, **kwargs)
+                else:
+                    raise NotImplementedError
 
             if resolution_mask and not self.mask_block:
                 pass
@@ -195,12 +197,12 @@ class Bottleneck(nn.Module):
             m = self.masker(x, meta)
         return m
 
-    def obtain_vector(self, x, meta):
-        if self.resolution_mask:
-            raise NotImplementedError
-        else:
-            vector = self.saliency(x, meta)
-        return vector
+    # def obtain_vector(self, x, meta):
+    #     if self.resolution_mask:
+    #         raise NotImplementedError
+    #     else:
+    #         vector = self.saliency(x, meta)
+    #     return vector
 
     def add_dropout(self, x, meta):
         if meta["stage_id"] in self.dropout_stages and 0 < self.dropout_ratio < 1:
@@ -240,7 +242,7 @@ class Bottleneck(nn.Module):
             mask_dilate, mask = m['dilate'], m['std']
 
             if self.channel_budget > 0:
-                vector = self.obtain_vector(x, meta)
+                vector = self.saliency(x, meta)
 
             x = dynconv.conv1x1(self.conv1, x, mask_dilate)
             x = dynconv.bn_relu(self.bn1, self.conv1_act, x, mask_dilate)
