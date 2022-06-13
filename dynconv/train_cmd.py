@@ -62,9 +62,13 @@ cmds = [
 
     # "python main_imagenet.py --budget -1 --model MobileNetV2 -s exp/baseline/mobilenet_full --model_cfg baseline_full"
 
-    "CUDA_VISIBLE_DEVICES=3 python main_imagenet.py --model_args hardware_2048 --resolution_mask --lr 0.01 --input_resolution --batchsize 80 --budget 0.5 --loss_args layer_wise --unlimited_lower -s exp/spatial_resmask/s50_layerloss_later_resmask --layer_loss_method later_mask",
-    "CUDA_VISIBLE_DEVICES=3 python main_imagenet.py --model_args hardware_2048 --resolution_mask --lr 0.01 --input_resolution --batchsize 80 --budget 0.25 --loss_args layer_wise --unlimited_lower -s exp/spatial_resmask/s50_layerloss_later_resmask --layer_loss_method later_mask",
-    "CUDA_VISIBLE_DEVICES=3 python main_imagenet.py --model_args hardware_2048 --resolution_mask --lr 0.01 --input_resolution --batchsize 80 --budget 0.75 --loss_args layer_wise --unlimited_lower -s exp/spatial_resmask/s50_layerloss_later_resmask --layer_loss_method later_mask",
+    "CUDA_VISIBLE_DEVICES=3 python main_imagenet.py --model_args hardware_2048 --resolution_mask --lr 0.01 --input_resolution --batchsize 72 --budget 0.5 --loss_args layer_wise --unlimited_lower -s exp/spatial_resmask/s50_layerloss_later_resmask --layer_loss_method later_mask",
+    "CUDA_VISIBLE_DEVICES=3 python main_imagenet.py --model_args hardware_2048 --resolution_mask --lr 0.01 --input_resolution --batchsize 72 --budget 0.25 --loss_args layer_wise --unlimited_lower -s exp/spatial_resmask/s50_layerloss_later_resmask --layer_loss_method later_mask",
+    "CUDA_VISIBLE_DEVICES=3 python main_imagenet.py --model_args hardware_2048 --resolution_mask --lr 0.01 --input_resolution --batchsize 72 --budget 0.75 --loss_args layer_wise --unlimited_lower -s exp/spatial_resmask/s50_layerloss_later_resmask --layer_loss_method later_mask",
+
+    "CUDA_VISIBLE_DEVICES=1 python main_imagenet.py --model_args hardware_2048 --lr 0.01 --input_resolution --batchsize 72 --budget 0.5 --loss_args layer_wise -s exp/spatial_channel_2048/s50_relu-C_s50_max_g32_stage23-layerblock --group_size 32 --channel_budget 0.5 --channel_stage 2 3",
+    "CUDA_VISIBLE_DEVICES=1 python main_imagenet.py --model_args hardware_2048 --lr 0.01 --input_resolution --batchsize 72 --budget 0.25 --loss_args layer_wise -s exp/spatial_channel_2048/s25_relu-C_s25_max_g32_stage23-layerblock --group_size 32 --channel_budget 0.25 --channel_stage 2 3",
+    "CUDA_VISIBLE_DEVICES=1 python main_imagenet.py --model_args hardware_2048 --lr 0.01 --input_resolution --batchsize 72 --budget 0.75 --loss_args layer_wise -s exp/spatial_channel_2048/s75_relu-C_s75_max_g32_stage23-layerblock --group_size 32 --channel_budget 0.75 --channel_stage 2 3"
 
 ]
 
