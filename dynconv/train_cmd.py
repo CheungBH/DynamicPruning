@@ -99,6 +99,8 @@ cmds = [
     "CUDA_VISIBLE_DEVICES=0 python main_cifar.py --resolution_mask --input_resolution --budget 0.25 -s exp/cifar_spatial_channel/s25_c50_resmask_ave --load exp/cifar_spatial_channel/baseline/checkpoint_best.pth --group_size 8 --channel_budget 0.5 --channel_stage 1 2 --mask_type conv --net_weight 0 --valid_range 1 --mask_kernel 1 --no_attention",
     "CUDA_VISIBLE_DEVICES=0 python main_cifar.py --resolution_mask --input_resolution --budget 0.25 -s exp/cifar_spatial_channel/s25_c25_resmask_ave --load exp/cifar_spatial_channel/baseline/checkpoint_best.pth --group_size 8 --channel_budget 0.25 --channel_stage 1 2 --mask_type conv --net_weight 0 --valid_range 1 --mask_kernel 1 --no_attention",
 
+    "CUDA_VISIBLE_DEVICES=1 python main_imagenet.py --lr 0.01 --input_resolution --batchsize 72 --pooling_method ave --budget 0.5 --loss_args layer_wise --unlimited_lower -s exp/spatial_channel_2048/s50_relu-C_s50_ave_g64_stage23-layerblock --group_size 32 --channel_budget 0.5 --channel_stage 6 -1 --model MobileNetV2 --mask_kernel 1 --no_attention",
+
 ]
 
 import os
