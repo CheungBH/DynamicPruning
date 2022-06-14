@@ -266,7 +266,7 @@ class Bottleneck(nn.Module):
 
     def get_masked_feature(self, x, mask=None):
         if mask is None:
-            return torch.ones(x.shape[0], 1, x.shape[-2], x.shape[-1]).cuda()
+            return x
         else:
-            return mask
+            return mask.float().expand_as(x) * x
 

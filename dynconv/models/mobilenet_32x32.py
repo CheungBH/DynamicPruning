@@ -155,10 +155,28 @@ class InvertedResidualBlock(nn.Module):
             m = self.masker(x, meta)
         return m
 
+    def forward_channel_pruning(self, x, meta):
+        vector = self.saliency(x, meta)
+        x = self.activation(self.bn1(self.conv_pw_1(x)))
+        x = channel_process(x, vector)
+        x = self.activation(self.bn_dw(self.conv3x3_dw(x)))
+        x = channel_process(x, vector)
+        x = self.bn2(self.conv_pw_2(x))
+        meta["masked_feat"] = x
+
+        conv_forward(self.conv_pw_1, None, None, vector, forward=False)
+        conv_forward(self.conv3x3_dw, None, vector, vector, forward=False)
+        conv_forward(self.conv_pw_2, None, vector, None, forward=False)
+
+        return x
+
     def forward_block(self, inp):
         x, meta = inp
         if (not self.sparse) or (not self.use_res_connect):
-            x = self.forward_basic(x)
+            if not self.channel_budget:
+                x = self.forward_basic(x)
+            else:
+                x = self.forward_channel_pruning(x, meta)
         else:
             meta["stride"] = self.stride
             m = self.obtain_mask(x, meta)
