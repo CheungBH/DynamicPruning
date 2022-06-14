@@ -150,6 +150,13 @@ class MobileNetV2(nn.Module):
         self.first_conv = nn.Sequential(*[ConvBNReLU(3, input_channel, stride=2, norm_layer=norm_layer)])
 
         features = []
+        block_sum = sum([s[2] for s in inverted_residual_setting])
+        if kwargs['channel_stage'][-1] == -1:
+            if len(kwargs['channel_stage']) == 2:
+                kwargs['channel_stage'] = [kwargs['channel_stage'][0], block_sum-1]
+            else:
+                raise ValueError("Not correct stage idx for -1")
+
         # building inverted residual blocks
         for stage_idx, (t, c, n, s) in enumerate(inverted_residual_setting):
             output_channel = _make_divisible(c * width_mult, round_nearest)

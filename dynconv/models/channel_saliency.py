@@ -37,7 +37,7 @@ class ChannelVectorUnit(nn.Module):
         self.pooling = MaskedMaxPooling() if pooling_method == "max" else MaskedAvePooling()
         self.out_channels = out_channels
         self.group_size = group_size
-        assert out_channels % group_size == 0, "The channels are not grouped with the same size"
+        # assert out_channels % group_size == 0, "The channels are not grouped with the same size"
         self.sigmoid = nn.Sigmoid()
         self.channel_saliency_predictor = nn.Linear(in_channels, out_channels//group_size)
         nn.init.kaiming_normal_(self.channel_saliency_predictor.weight, mode='fan_out', nonlinearity='relu')

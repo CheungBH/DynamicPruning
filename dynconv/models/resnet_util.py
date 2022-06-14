@@ -255,10 +255,11 @@ class Bottleneck(nn.Module):
             if self.channel_budget > 0:
                 x = channel_process(x, vector)
                 conv_forward(self.conv2, None, vector, vector, forward=False)
+                conv_forward(self.conv3, None, vector, None, forward=False)
             x = dynconv.conv1x1(self.conv3, x, mask)
             x = dynconv.bn_relu(self.bn3, None, x, mask)
-            out = identity + dynconv.apply_mask(x, mask)
             meta["masked_feat"] = self.get_masked_feature(x, mask.hard)
+            out = identity + dynconv.apply_mask(x, mask)
 
         out = self.relu(out)
         return out, meta

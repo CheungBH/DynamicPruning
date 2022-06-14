@@ -1,6 +1,7 @@
 from torch import nn
 import dynconv
 import torch
+from models.channel_saliency import conv_forward, bn_relu_foward, channel_process, ChannelVectorUnit
 
 
 def _make_divisible(v, divisor, min_value=None):
@@ -70,17 +71,29 @@ class InvertedResidual(nn.Module):
 class InvertedResidualBlock(nn.Module):
     def __init__(self, inp, oup, stride, expand_ratio, norm_layer=None, sparse=False, resolution_mask=False,
                  mask_block=False, mask_type="conv", final_activation="linear", downsample=False,
-                 input_resolution=False, dropout_ratio=0, dropout_stages=[-1], **kwargs):
+                 input_resolution=False, dropout_ratio=0, dropout_stages=[-1], channel_budget=-1, channel_unit_type="fc",
+                 group_size=1, **kwargs):
         super(InvertedResidualBlock, self).__init__()
         self.stride = stride
         assert stride in [1, 2]
         self.sparse = sparse
+        self.channel_budget = channel_budget
         self.use_res_connect = (self.stride == 1 and inp == oup) if downsample is None else True
         self.downsample = downsample
 
         self.resolution_mask = resolution_mask
         self.mask_block = mask_block
         self.input_resolution = input_resolution
+        hidden_dim = int(round(inp * expand_ratio))
+
+        if sparse:
+            if channel_budget >= 0:
+                if channel_unit_type == "fc":
+                    self.saliency = ChannelVectorUnit(in_channels=inp, out_channels=hidden_dim,
+                                                      group_size=group_size, channel_budget=channel_budget, **kwargs)
+                else:
+                    raise NotImplementedError
+                
         if self.sparse and self.use_res_connect:
             if self.resolution_mask:
                 if self.mask_block:
@@ -101,7 +114,6 @@ class InvertedResidualBlock(nn.Module):
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
 
-        hidden_dim = int(round(inp * expand_ratio))
 
         self.activation = nn.ReLU(inplace=True)
 
@@ -151,15 +163,25 @@ class InvertedResidualBlock(nn.Module):
             meta["stride"] = self.stride
             m = self.obtain_mask(x, meta)
             mask_dilate, mask = m['dilate'], m['std']
+            if self.channel_budget > 0:
+                vector = self.saliency(x, meta)
 
             x = dynconv.conv1x1(self.conv_pw_1, x, mask, mask_dilate)
             x = dynconv.bn_relu(self.bn1, self.activation, x, mask_dilate)
             x = dynconv.apply_mask(x, mask_dilate) if self.input_resolution else x
+            if self.channel_budget > 0:
+                x = channel_process(x, vector)
+                conv_forward(self.conv_pw_1, None, None, vector, forward=False)
             x = dynconv.conv3x3_dw(self.conv3x3_dw, x, mask_dilate, mask)
             x = dynconv.bn_relu(self.bn_dw, self.activation, x, mask)
+            if self.channel_budget > 0:
+                x = channel_process(x, vector)
+                conv_forward(self.conv3x3_dw, None, vector, vector, forward=False)
+                conv_forward(self.conv_pw_2, None, vector, None, forward=False)
             x = dynconv.conv1x1(self.conv_pw_2, x, mask_dilate, mask)
             x = dynconv.bn_relu(self.bn2, None, x, mask)
             x = dynconv.apply_mask(x, mask)
+            meta["masked_feat"] = self.get_masked_feature(x, mask.hard)
         return (x, meta)
 
     def forward(self, inp):
@@ -169,7 +191,7 @@ class InvertedResidualBlock(nn.Module):
             identity = self.downsample(x)
 
         out = self.forward_block(inp)
-        meta["block_id"] += 1
+        meta["stage_id"], meta["block_id"] = meta["stage_id"]+1, meta["block_id"]+1
         if self.final_activation == "linear":
             return (identity + out[0], out[1]) if self.use_res_connect else out
         elif self.final_activation == "relu":
@@ -178,6 +200,11 @@ class InvertedResidualBlock(nn.Module):
         else:
             raise NotImplementedError
 
+    def get_masked_feature(self, x, mask=None):
+        if mask is None:
+            return torch.ones(x.shape[0], 1, x.shape[-2], x.shape[-1]).cuda()
+        else:
+            return mask
 
 class MobileNetV2_32x32(nn.Module):
     def __init__(self,
