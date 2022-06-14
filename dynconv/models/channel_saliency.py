@@ -23,11 +23,11 @@ class MaskedMaxPooling(nn.Module):
         super(MaskedMaxPooling, self).__init__()
         self.pooling = nn.AdaptiveAvgPool2d(size)
 
-    def forward(self, x, mask):
+    def forward(self, feat, mask):
         if mask is None:
-            return self.pooling(x)
+            return self.pooling(feat)
         else:
-            return self.pooling(x * mask.expand_as(x))
+            return self.pooling(feat * mask.expand_as(feat))
 
 
 class ChannelVectorUnit(nn.Module):
@@ -48,7 +48,7 @@ class ChannelVectorUnit(nn.Module):
     def forward(self, x, meta):
         if meta["stage_id"] not in self.target_stage:
             return torch.ones(x.shape[0], self.out_channels).cuda()
-        x = self.pooling(x, meta["masked_feat"]).squeeze()
+        x = self.pooling(x, meta["saliency_mask"]).squeeze()
         x = self.channel_saliency_predictor(x)
         x = self.sigmoid(x)
         meta["lasso_sum"] += torch.mean(torch.sum(x, dim=-1))

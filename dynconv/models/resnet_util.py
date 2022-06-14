@@ -258,13 +258,13 @@ class Bottleneck(nn.Module):
                 conv_forward(self.conv3, None, vector, None, forward=False)
             x = dynconv.conv1x1(self.conv3, x, mask)
             x = dynconv.bn_relu(self.bn3, None, x, mask)
-            meta["masked_feat"] = self.get_masked_feature(x, mask.hard)
+            meta["saliency_mask"] = self.get_saliency_mask(x, mask.hard)
             out = identity + dynconv.apply_mask(x, mask)
 
         out = self.relu(out)
         return out, meta
 
-    def get_masked_feature(self, x, mask=None):
+    def get_saliency_mask(self, x, mask=None):
         if mask is None:
             return torch.ones(x.shape[0], 1, x.shape[-2], x.shape[-1]).cuda()
         else:

@@ -200,7 +200,7 @@ class MobileNetV2(nn.Module):
 
     def forward(self, x, meta):
         x = self.first_conv(x)
-        meta["block_id"], meta["stage_id"], meta["masked_feat"] = 0, 0, x
+        meta["block_id"], meta["stage_id"], meta["saliency_mask"] = 0, 0, x
         x, meta = self.features((x, meta))
         x = self.final_conv(x)
         # Cannot use "squeeze" as batch-size can be 1 => must use reshape with x.shape[0]
