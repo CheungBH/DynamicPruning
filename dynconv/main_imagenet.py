@@ -344,20 +344,20 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     sparse_loss_record = utils.AverageMeter()
     layer_sparsity_records = [utils.AverageMeter() for _ in range(16)]
 
-    if float(args.lr_decay[0]) > 1:
-        if epoch < args.lr_decay[0]:
-            gumbel_temp = 5.0
-        elif epoch < args.lr_decay[1]:
-            gumbel_temp = 2.5
-        else:
-            gumbel_temp = 1
+    # if float(args.lr_decay[0]) > 1:
+    #     if epoch < args.lr_decay[0]:
+    #         gumbel_temp = 5.0
+    #     elif epoch < args.lr_decay[1]:
+    #         gumbel_temp = 2.5
+    #     else:
+    #         gumbel_temp = 1
+    # else:
+    if epoch < 0.5*args.epochs:
+        gumbel_temp = 5.0
+    elif epoch < 0.8*args.epochs:
+        gumbel_temp = 2.5
     else:
-        if epoch < 0.5*args.epochs:
-            gumbel_temp = 5.0
-        elif epoch < 0.8*args.epochs:
-            gumbel_temp = 2.5
-        else:
-            gumbel_temp = 1
+        gumbel_temp = 1
     gumbel_noise = False if epoch > 0.8*args.epochs else True
 
     num_step =  len(train_loader)
