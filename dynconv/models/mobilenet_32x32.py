@@ -198,8 +198,8 @@ class InvertedResidualBlock(nn.Module):
                 conv_forward(self.conv_pw_2, None, vector, None, forward=False)
             x = dynconv.conv1x1(self.conv_pw_2, x, mask_dilate, mask)
             x = dynconv.bn_relu(self.bn2, None, x, mask)
-            x = dynconv.apply_mask(x, mask)
             meta["masked_feat"] = self.get_masked_feature(x, mask.hard)
+            x = dynconv.apply_mask(x, mask)
         return (x, meta)
 
     def forward(self, inp):
@@ -220,9 +220,10 @@ class InvertedResidualBlock(nn.Module):
 
     def get_masked_feature(self, x, mask=None):
         if mask is None:
-            return torch.ones(x.shape[0], 1, x.shape[-2], x.shape[-1]).cuda()
+            return x
         else:
-            return mask
+            return mask.float().expand_as(x) * x
+
 
 class MobileNetV2_32x32(nn.Module):
     def __init__(self,
