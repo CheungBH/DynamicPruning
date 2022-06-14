@@ -143,8 +143,11 @@ class ResNet_BN_32x32(nn.Module):
 
         meta["stage_id"], meta["block_id"], meta["masked_feat"] = 0, 0, None
         x, meta = self.layer1((x, meta))
+        self.refresh_layer_id(meta)
         x, meta = self.layer2((x, meta))
+        self.refresh_layer_id(meta)
         x, meta = self.layer3((x, meta))
+        self.refresh_layer_id(meta)
 
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
