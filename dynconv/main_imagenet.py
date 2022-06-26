@@ -40,6 +40,7 @@ def main():
     parser.add_argument('--epochs', default=100, type=int, help='number of epochs')
     parser.add_argument('--budget', default=-1, type=float, help='computational budget (between 0 and 1) (-1 for no sparsity)')
     parser.add_argument('--workers', default=8, type=int, help='number of dataloader workers')
+    parser.add_argument('--res', default=224, type=int, help='number of epochs')
 
     # learning strategy
     parser.add_argument('--lr', default=0.025, type=float, help='learning rate')
@@ -108,7 +109,7 @@ def main():
     args = parser.parse_args()
     print('Args:', args)
     args = SimpleArguments().update(args)
-    res = 224
+    res = args.res
 
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                     std=[0.229, 0.224, 0.225])
