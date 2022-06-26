@@ -1,5 +1,5 @@
 import argparse
-import os.path
+import os.path, sys
 
 import matplotlib.pyplot as plt
 from tensorboardX import SummaryWriter
@@ -137,10 +137,15 @@ def main():
                        dropout_stages=args.dropout_stages, dropout_ratio=args.dropout_ratio,
                        use_downsample=args.use_downsample, final_activation=args.final_activation).to(device=device)
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0,
-            "feat_before": [], "feat_after": [], "lasso_sum": 0}
+            "feat_before": [], "feat_after": [], "lasso_sum": 0, "channel_prediction": {}}
     _ = model(torch.rand((2, 3, res, res)).cuda(), meta)
 
     file_path = os.path.join(args.save_dir, "log.txt")
+    cmd = utils.generate_cmd(sys.argv[1:])
+    with open(file_path, "a+") as f:
+        f.write(cmd + "\n")
+        print('Args:', args, file=f)
+        f.write("\n")
 
     ## CRITERION
     class Loss(nn.Module):
@@ -334,8 +339,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
 
         # compute output
         meta = {'masks': [], 'device': device, 'gumbel_temp': gumbel_temp, 'gumbel_noise': gumbel_noise,
-                'epoch': epoch,
-                "lasso_sum": 0}
+                'epoch': epoch, "lasso_sum": 0, "channel_prediction": {}}
         output, meta = model(input, meta)
         t_loss, s_loss, layer_percents = criterion(output, target, meta)
         prec1 = utils.accuracy(output.data, target)[0]
@@ -396,7 +400,7 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
 
             # compute output
             meta = {'masks': [], 'device': device, 'gumbel_temp': 1.0, 'gumbel_noise': False, 'epoch': epoch,
-                    "feat_before": [], "feat_after": [], "lasso_sum": 0}
+                    "feat_before": [], "feat_after": [], "lasso_sum": 0, "channel_prediction": {}}
             output, meta = model(input, meta)
             output = output.float()
             t_loss, s_loss, layer_percents = criterion(output, target, meta, phase="")
