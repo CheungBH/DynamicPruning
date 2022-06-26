@@ -141,6 +141,10 @@ def main():
     _ = model(torch.rand((2, 3, res, res)).cuda(), meta)
 
     file_path = os.path.join(args.save_dir, "log.txt")
+    if not args.evaluate and len(args.save_dir) > 0:
+        if not os.path.exists(os.path.join(args.save_dir)):
+            os.makedirs(os.path.join(args.save_dir))
+
     cmd = utils.generate_cmd(sys.argv[1:])
     with open(file_path, "a+") as f:
         f.write(cmd + "\n")
@@ -190,10 +194,6 @@ def main():
     ## CHECKPOINT
     start_epoch = -1
     best_prec1 = 0
-
-    if not args.evaluate and len(args.save_dir) > 0:
-        if not os.path.exists(os.path.join(args.save_dir)):
-            os.makedirs(os.path.join(args.save_dir))
 
     if args.resume:
         if os.path.isfile(args.resume):
