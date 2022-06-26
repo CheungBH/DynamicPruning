@@ -173,7 +173,7 @@ class InvertedResidualBlock(nn.Module):
     def forward_block(self, inp):
         x, meta = inp
         if (not self.sparse) or (not self.use_res_connect):
-            if not self.channel_budget:
+            if self.channel_budget == -1:
                 x = self.forward_basic(x)
             else:
                 x = self.forward_channel_pruning(x, meta)
