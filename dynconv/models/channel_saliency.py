@@ -52,7 +52,9 @@ class ChannelVectorUnit(nn.Module):
         x = self.channel_saliency_predictor(x)
         x = self.sigmoid(x)
         meta["lasso_sum"] += torch.mean(torch.sum(x, dim=-1))
+        x = x.unsqueeze(dim=0) if len(x.shape) == 1 else x
         x = self.winner_take_all(x.clone())
+        meta["channel_prediction"][(meta["stage_id"], meta["block_id"])] = x
         x = self.expand(x)
         return x
 
@@ -81,12 +83,9 @@ def conv_forward(conv_module, x, inp_vec=None, out_vec=None, forward=True):
 
 def bn_relu_foward(bn_module, relu_module, x, vector=None):
     bn_module.__output_ratio__ = vector_ratio(vector)
+    relu_module.__output_ratio__ = vector_ratio(vector)
     if relu_module is not None:
         relu_module.vector = vector
-
-    x = bn_module(x)
-    x = relu_module(x) if relu_module is not None else x
-    return x
 
 
 def channel_process(x, vector):

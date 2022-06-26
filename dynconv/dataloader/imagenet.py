@@ -62,7 +62,7 @@ class IN1K(torch.utils.data.Dataset):
 
         elif split == 'val':
             self.imgs = [osp.relpath(f, root)
-                         for f in glob(osp.join(root, 'validation', '*.JPEG'))]
+                         for f in glob(osp.join(root, 'ILSVRC2012_img_val', '*.JPEG'))]
             self.imgs.sort()
             ilsvrc_labels = np.loadtxt(osp.join(root,
                                                 'ILSVRC2012_devkit_t12',
