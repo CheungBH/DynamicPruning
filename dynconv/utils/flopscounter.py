@@ -116,7 +116,7 @@ def remove_flops_mask(module):
 
 # ---- Internal functions
 def is_supported_instance(module):
-    mode = 'basic'
+    mode = 'all'
 
     if mode == 'basic': # only convs
         if isinstance(module, (torch.nn.Conv2d,)):

@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import os
 from torchvision import utils as vutils
+from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 
 mean = (0.4914, 0.4822, 0.4465)
 std = (0.2023, 0.1994, 0.2010)
@@ -29,12 +30,14 @@ def save_feat(feats, dir, name, prefix, stages=(3,4,6,3)):
             normalize=True)
 
 
-def plot_image(input):
+def plot_image(input, save_dir=""):
     ''' shows the first image of a 4D pytorch batch '''
     assert input.dim() == 4
     plt.figure('Image')
     im = unnormalize(input[0]).cpu().numpy().transpose(1,2,0)
     plt.imshow(im)
+    if save_dir:
+        plt.savefig(os.path.join(save_dir, "raw_image.jpg"))
 
 
 def plot_ponder_cost(masks):
@@ -46,12 +49,31 @@ def plot_ponder_cost(masks):
     plt.imshow(ponder_cost, vmin=0, vmax=len(masks))
     plt.colorbar()
 
+
+def plot_paper_masks(masks, folder_path):
+    from matplotlib.backends.backend_pdf import PdfPages
+    figures = []
+    cmap = ListedColormap(["#E0E0E0", "#de8445"])
+    for idx, mask in enumerate(masks):
+        fig = plt.figure()
+        m = mask['std'].hard[0].cpu().numpy().squeeze(0)
+        plt.imshow(m, cmap=cmap)
+        plt.axis("off")
+        figures.append(fig)
+        plt.savefig(os.path.join(folder_path, "mask_{}.png".format(idx)))
+    Pdf = PdfPages(os.path.join(folder_path, "MaskSum.pdf"))
+    for fig in figures:
+        Pdf.savefig(fig)
+    Pdf.close()
+
+
 def plot_masks(masks, save_path="", WIDTH=2):
     ''' plots individual masks as subplots 
     argument masks is a list with masks as returned by the network '''
     nb_mask = len(masks)
     HEIGHT = math.ceil(nb_mask / WIDTH)
     f, axarr = plt.subplots(HEIGHT, WIDTH)
+    cmap = ListedColormap(["#E0E0E0", "#de8445"])
 
     for i, mask in enumerate(masks):
         x = i % WIDTH
@@ -60,7 +82,7 @@ def plot_masks(masks, save_path="", WIDTH=2):
         m = mask['std'].hard[0].cpu().numpy().squeeze(0)
 
         assert m.ndim == 2
-        axarr[y,x].imshow(m, vmin=0, vmax=1)
+        axarr[y,x].imshow(m, vmin=0, vmax=1, cmap=cmap)
         axarr[y,x].axis('off')
     
     for j in range(i+1, WIDTH*HEIGHT):

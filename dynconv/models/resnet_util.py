@@ -228,7 +228,6 @@ class Bottleneck(nn.Module):
                 out = out * mask.unsqueeze(dim=1)
             else:
                 out, _ = self.forward_conv(x)
-            meta["block_id"] += 1
 
             if self.save_feat:
                 meta["feat_before"].append(out)
@@ -261,6 +260,7 @@ class Bottleneck(nn.Module):
             meta["saliency_mask"] = self.get_saliency_mask(x, mask.hard)
             out = identity + dynconv.apply_mask(x, mask)
 
+        meta["block_id"] += 1
         out = self.relu(out)
         return out, meta
 

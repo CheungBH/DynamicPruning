@@ -126,7 +126,7 @@ def main():
                        use_downsample=args.use_downsample, final_activation=args.final_activation).to(device=device)
 
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0,
-            "feat_before": [], "feat_after": [], "lasso_sum": 0}
+            "feat_before": [], "feat_after": [], "lasso_sum": 0, "channel_prediction": {}}
     _ = model(torch.rand((2, 3, res, res)).cuda(), meta)
 
 
@@ -195,7 +195,7 @@ def main():
     ])
 
     valset = dataloader.imagenet.IN1K(root=args.dataset_root, split='val', transform=transform_val)
-    val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=False, num_workers=args.workers, pin_memory=False)
+    val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=True, num_workers=args.workers, pin_memory=False)
 
     file_path = os.path.join(args.save_dir, "log.txt")
     cmd = utils.generate_cmd(sys.argv[1:])
@@ -417,6 +417,15 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
     sparse_loss_record = utils.AverageMeter()
     layer_sparsity_records = [utils.AverageMeter() for _ in range(16)]
 
+    import h5py, shutil
+    channel_files = [h5py.File("channels_3_1.h5", "w"), h5py.File("channels_3_2.h5", "w")]
+    target_stages = [(3, 1), (3, 2)]
+
+    def record_channels(img_path, channels, channel_files):
+        for channel_file, stage in zip(channel_files, target_stages):
+            for path, channel in zip(img_path, channels[stage]):
+                channel_file[path.split("/")[-1]] = channel.detach().cpu()
+
     # switch to evaluate mode
     model = flopscounter.add_flops_counting_methods(model)
     model.eval().start_flops_count()
@@ -425,13 +434,17 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
     num_step = len(val_loader)
     with torch.no_grad():
         for input, target, img_path in tqdm.tqdm(val_loader, total=num_step, ascii=True, mininterval=5):
+            for file in channel_files:
+                file.close()
+            channel_files = [h5py.File("channels_3_1.h5", "a"), h5py.File("channels_3_2.h5", "a")]
             input = input.to(device=device, non_blocking=True)
             target = target.to(device=device, non_blocking=True)
 
             # compute output
             meta = {'masks': [], 'device': device, 'gumbel_temp': 1.0, 'gumbel_noise': False, 'epoch': epoch,
-                    "feat_before": [], "feat_after": [], "lasso_sum": 0}
+                    "feat_before": [], "feat_after": [], "lasso_sum": 0, "channel_prediction": {}}
             output, meta = model(input, meta)
+            record_channels(img_path, meta['channel_prediction'], channel_files)
             output = output.float()
             t_loss, s_loss, layer_percents = criterion(output, target, meta, phase="")
             task_loss_record.update(t_loss.item(), input.size(0))
@@ -451,13 +464,17 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
                 if args.plot_save_dir and os.path.exists(os.path.join(args.plot_save_dir, img_path[0].split("/")[-1])):
                     pass
                 else:
-                    viz.plot_image(input)
+                    save_path = os.path.join(args.plot_save_dir, img_path[0].split("/")[-1].split(".")[0]) \
+                        if args.plot_save_dir else ""
+                    os.makedirs(save_path, exist_ok=True)
+                    shutil.copy(os.path.join(args.dataset_root, img_path[0]), os.path.join(save_path, "raw_image.jpg"))
+                    # viz.plot_image(input, save_path)
+                    viz.plot_paper_masks(meta['masks'], save_path)
                     # viz.plot_ponder_cost(meta['masks'])
-                    save_path = os.path.join(args.plot_save_dir, img_path[0].split("/")[-1]) if args.plot_save_dir else ""
                     if args.resolution_mask:
-                        viz.plot_masks(meta['masks'], save_path=save_path)
+                        viz.plot_masks(meta['masks'], save_path=os.path.join(save_path, "mask_sum.jpg"))
                     else:
-                        viz.plot_masks(meta['masks'], save_path=save_path, WIDTH=4)
+                        viz.plot_masks(meta['masks'], save_path=os.path.join(save_path, "mask_sum.jpg"), WIDTH=4)
                     viz.showKey()
 
     print(f'* Epoch {epoch} - Prec@1 {top1.avg:.3f}')
