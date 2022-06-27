@@ -270,40 +270,40 @@ def main():
         model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
 
     ## TRAINING
-        best_epoch, best_MMac = start_epoch, -1
-        for epoch in range(start_epoch, args.epochs):
-            print(f"########## Epoch {epoch} ##########")
+    best_epoch, best_MMac = start_epoch, -1
+    for epoch in range(start_epoch, args.epochs):
+        print(f"########## Epoch {epoch} ##########")
 
-            # train for one epoch
-            print('current lr {:.5e}'.format(optimizer.param_groups[0]['lr']))
-            train(args, train_loader, model, criterion, optimizer, epoch, file_path)
-            lr_scheduler.step()
+        # train for one epoch
+        print('current lr {:.5e}'.format(optimizer.param_groups[0]['lr']))
+        # train(args, train_loader, model, criterion, optimizer, epoch, file_path)
+        # lr_scheduler.step()
 
-            # evaluate on validation set
-            prec1, MMac = validate(args, val_loader, model, criterion, epoch, file_path)
-            if args.mask_type == "stat_mom":
-                print("The threshold for each layer is {}".format(
-                    ",".join([str(round(v.data.squeeze().tolist(), 4)) for k, v in model.named_parameters()
-                              if "threshold" in k])))
+        # evaluate on validation set
+        prec1, MMac = validate(args, val_loader, model, criterion, epoch, file_path)
+        if args.mask_type == "stat_mom":
+            print("The threshold for each layer is {}".format(
+                ",".join([str(round(v.data.squeeze().tolist(), 4)) for k, v in model.named_parameters()
+                          if "threshold" in k])))
 
-            # remember best prec@1 and save checkpoint
-            is_best = prec1 > best_prec1
-            if is_best:
-                best_epoch, best_MMac = epoch, MMac
-            best_prec1 = max(prec1, best_prec1)
-            utils.save_checkpoint({
-                'state_dict': model.state_dict(),
-                'optimizer': optimizer.state_dict(),
-                'epoch': epoch + 1,
-                'best_prec1': best_prec1,
-                "iteration": iteration
-            }, folder=args.save_dir, is_best=is_best)
-            with open(file_path, "a+") as f:
-                print(f" *Currently Best prec1: {best_prec1}\n-------------------------------------------------\n",
-                      file=f)
-
+        # remember best prec@1 and save checkpoint
+        is_best = prec1 > best_prec1
+        if is_best:
+            best_epoch, best_MMac = epoch, MMac
+        best_prec1 = max(prec1, best_prec1)
+        utils.save_checkpoint({
+            'state_dict': model.state_dict(),
+            'optimizer': optimizer.state_dict(),
+            'epoch': epoch + 1,
+            'best_prec1': best_prec1,
+            "iteration": iteration
+        }, folder=args.save_dir, is_best=is_best)
         with open(file_path, "a+") as f:
-            print(f" * Best prec1: {best_prec1}, Epoch {best_epoch}, MMac {best_MMac}", file=f)
+            print(f" *Currently Best prec1: {best_prec1}\n-------------------------------------------------\n",
+                  file=f)
+
+    with open(file_path, "a+") as f:
+        print(f" * Best prec1: {best_prec1}, Epoch {best_epoch}, MMac {best_MMac}", file=f)
 
 def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     """
