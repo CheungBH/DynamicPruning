@@ -259,15 +259,14 @@ def main():
     ## Count number of params
     print("* Number of trainable parameters:", utils.count_parameters(model))
 
+    if mix_precision:
+        model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
 
     ## EVALUATION
     if args.evaluate:
         print(f"########## Evaluation ##########")
         prec1 = validate(args, val_loader, model, criterion, start_epoch)
         return
-
-    if mix_precision:
-        model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
 
     ## TRAINING
     best_epoch, best_MMac = start_epoch, -1

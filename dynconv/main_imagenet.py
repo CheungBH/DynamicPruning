@@ -285,6 +285,9 @@ def main():
     ## Count number of params
     print("* Number of trainable parameters:", utils.count_parameters(model))
 
+    if mix_precision:
+        model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
+
     ## EVALUATION
     if args.evaluate:
         # evaluate on validation set
@@ -296,9 +299,6 @@ def main():
                           if "threshold" in k])))
         return
 
-    if mix_precision:
-        model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
-        
     ## TRAINING
     best_epoch, best_MMac = start_epoch, -1
     for epoch in range(start_epoch, args.epochs):
