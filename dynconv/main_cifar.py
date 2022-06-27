@@ -276,8 +276,8 @@ def main():
 
         # train for one epoch
         print('current lr {:.5e}'.format(optimizer.param_groups[0]['lr']))
-        # train(args, train_loader, model, criterion, optimizer, epoch, file_path)
-        # lr_scheduler.step()
+        train(args, train_loader, model, criterion, optimizer, epoch, file_path)
+        lr_scheduler.step()
 
         # evaluate on validation set
         prec1, MMac = validate(args, val_loader, model, criterion, epoch, file_path)
