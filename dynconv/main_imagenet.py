@@ -22,7 +22,7 @@ from torch.backends import cudnn as cudnn
 from simple_args import SimpleArguments
 
 from apex import amp
-mix_precision = True
+mix_precision = False
 
 cudnn.benchmark = True
 device='cuda'
@@ -44,7 +44,7 @@ def main():
 
     # learning strategy
     parser.add_argument('--lr', default=0.025, type=float, help='learning rate')
-    parser.add_argument('--lr_decay', default=[30,60,90], nargs='+', help='learning rate decay epochs')
+    parser.add_argument('--lr_decay', default=[30,60,90], nargs='+', type=int, help='learning rate decay epochs')
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
     parser.add_argument('--weight_decay', default=1e-4, type=float, help='weight decay')
     parser.add_argument('--optim', type=str, default='sgd', help='network model name')
