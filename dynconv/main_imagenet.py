@@ -20,6 +20,7 @@ import utils.utils as utils
 import utils.viz as viz
 from torch.backends import cudnn as cudnn
 from simple_args import SimpleArguments
+from math import cos, pi
 
 from apex import amp
 mix_precision = False
@@ -27,6 +28,17 @@ mix_precision = False
 cudnn.benchmark = True
 device='cuda'
 iteration = 0
+
+
+def adjust_learning_rate(optimizer, current_epoch, max_epoch, lr_min=0.0, lr_max=0.1, warmup=True):
+    warmup_epoch = 5 if warmup else 0
+    if current_epoch < warmup_epoch:
+        lr = lr_max * current_epoch / warmup_epoch
+    else:
+        lr = lr_min + (lr_max - lr_min) * (
+                    1 + cos(pi * (current_epoch - warmup_epoch) / (max_epoch - warmup_epoch))) / 2
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
 
 
 def main():
@@ -277,6 +289,10 @@ def main():
     elif args.scheduler == "exp":
         lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
             optimizer, gamma=float(args.lr_decay[0]), last_epoch=start_epoch)
+    elif args.scheduler == "cosine_anneal_warmup":
+        pass
+        # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+        #     optimizer, gamma=float(args.lr_decay[0]), last_epoch=start_epoch)
     else:
         raise NotImplementedError
 
@@ -307,7 +323,8 @@ def main():
         # train for one epoch
         print('current lr {:.5e}'.format(optimizer.param_groups[0]['lr']))
         train(args, train_loader, model, criterion, optimizer, epoch, file_path)
-        lr_scheduler.step()
+        if args.scheduler != "cosine_anneal_warmup":
+            lr_scheduler.step()
 
         # evaluate on validation set
         prec1, MMac = validate(args, val_loader, model, criterion, epoch, file_path)
@@ -345,6 +362,9 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     sparse_loss_record = utils.AverageMeter()
     layer_sparsity_records = [utils.AverageMeter() for _ in range(16)]
 
+    if args.scheduler != "cosine_anneal_warmup":
+        adjust_learning_rate(optimizer=optimizer, current_epoch=epoch, max_epoch=args.epochs, lr_min=0.00001,
+                             lr_max=0.01, warmup=True)
     # if float(args.lr_decay[0]) > 1:
     #     if epoch < args.lr_decay[0]:
     #         gumbel_temp = 5.0
