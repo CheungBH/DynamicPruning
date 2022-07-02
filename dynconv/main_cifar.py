@@ -1,6 +1,6 @@
 import argparse
 import os.path, sys
-
+from math import cos, pi
 import matplotlib.pyplot as plt
 from tensorboardX import SummaryWriter
 import dynconv
@@ -18,11 +18,22 @@ import utils.viz as viz
 from torch.backends import cudnn as cudnn
 import models
 from apex import amp
-mix_precision = True
+mix_precision = False
 
 cudnn.benchmark = True
 iteration = 0
 device = 'cuda:0'
+
+def adjust_learning_rate(optimizer, current_epoch, max_epoch, lr_min=0.0, lr_max=0.1, warmup=True):
+    warmup_epoch = 10 if warmup else 0
+    if current_epoch < warmup_epoch:
+        lr = lr_max * current_epoch / warmup_epoch
+    else:
+        lr = lr_min + (lr_max - lr_min) * (
+                    1 + cos(pi * (current_epoch - warmup_epoch) / (max_epoch - warmup_epoch))) / 2
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
 
 def main():
     global iteration
@@ -276,7 +287,8 @@ def main():
         # train for one epoch
         print('current lr {:.5e}'.format(optimizer.param_groups[0]['lr']))
         train(args, train_loader, model, criterion, optimizer, epoch, file_path)
-        lr_scheduler.step()
+        if args.scheduler == "cosine_anneal_warmup":
+            lr_scheduler.step()
 
         # evaluate on validation set
         prec1, MMac = validate(args, val_loader, model, criterion, epoch, file_path)
@@ -314,20 +326,16 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     sparse_loss_record = utils.AverageMeter()
     layer_sparsity_records = [utils.AverageMeter() for _ in range(16)]
 
-    if float(args.lr_decay[0]) > 1:
-        if epoch < args.lr_decay[0]:
-            gumbel_temp = 5.0
-        elif epoch < args.lr_decay[1]:
-            gumbel_temp = 2.5
-        else:
-            gumbel_temp = 1
+    if args.scheduler != "cosine_anneal_warmup":
+        adjust_learning_rate(optimizer=optimizer, current_epoch=epoch, max_epoch=args.epochs, lr_min=0.00001,
+                             lr_max=0.1, warmup=True)
+
+    if epoch < 0.5 * args.epochs:
+        gumbel_temp = 5.0
+    elif epoch < 0.8 * args.epochs:
+        gumbel_temp = 2.5
     else:
-        if epoch < 0.5 * args.epochs:
-            gumbel_temp = 5.0
-        elif epoch < 0.8 * args.epochs:
-            gumbel_temp = 2.5
-        else:
-            gumbel_temp = 1
+        gumbel_temp = 1
     gumbel_noise = False if epoch > 0.8 * args.epochs else True
 
     num_step = len(train_loader)

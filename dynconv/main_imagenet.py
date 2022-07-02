@@ -362,7 +362,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     sparse_loss_record = utils.AverageMeter()
     layer_sparsity_records = [utils.AverageMeter() for _ in range(16)]
 
-    if args.scheduler != "cosine_anneal_warmup":
+    if args.scheduler == "cosine_anneal_warmup":
         adjust_learning_rate(optimizer=optimizer, current_epoch=epoch, max_epoch=args.epochs, lr_min=0.00001,
                              lr_max=0.01, warmup=True)
     # if float(args.lr_decay[0]) > 1:
