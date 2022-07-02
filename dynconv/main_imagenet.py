@@ -389,7 +389,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
 
         # compute output
         meta = {'masks': [], 'device': device, 'gumbel_temp': gumbel_temp, 'gumbel_noise': gumbel_noise, 'epoch': epoch,
-                "lasso_sum": 0}
+                "lasso_sum": 0, "channel_prediction": {}}
         output, meta = model(input, meta)
         t_loss, s_loss, layer_percents = criterion(output, target, meta)
         prec1 = utils.accuracy(output.data, target)[0]
@@ -439,7 +439,7 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
     layer_sparsity_records = [utils.AverageMeter() for _ in range(16)]
 
     import h5py, shutil
-    channel_files = [h5py.File("channels_3_1.h5", "w"), h5py.File("channels_3_2.h5", "w")]
+    channel_files = []
     target_stages = [(3, 1), (3, 2)]
 
     def record_channels(img_path, channels, channel_files):
@@ -457,7 +457,7 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
         for input, target, img_path in tqdm.tqdm(val_loader, total=num_step, ascii=True, mininterval=5):
             for file in channel_files:
                 file.close()
-            channel_files = [h5py.File("channels_3_1.h5", "a"), h5py.File("channels_3_2.h5", "a")]
+            channel_files = []
             input = input.to(device=device, non_blocking=True)
             target = target.to(device=device, non_blocking=True)
 
