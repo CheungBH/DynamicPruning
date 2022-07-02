@@ -263,6 +263,8 @@ def main():
     elif args.scheduler == "exp":
         lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
             optimizer, gamma=float(args.lr_decay[0]), last_epoch=start_epoch)
+    elif args.scheduler == "cosine_anneal_warmup":
+        pass
     else:
         raise NotImplementedError
     start_epoch += 1
@@ -287,7 +289,7 @@ def main():
         # train for one epoch
         print('current lr {:.5e}'.format(optimizer.param_groups[0]['lr']))
         train(args, train_loader, model, criterion, optimizer, epoch, file_path)
-        if args.scheduler == "cosine_anneal_warmup":
+        if args.scheduler != "cosine_anneal_warmup":
             lr_scheduler.step()
 
         # evaluate on validation set
@@ -326,7 +328,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     sparse_loss_record = utils.AverageMeter()
     layer_sparsity_records = [utils.AverageMeter() for _ in range(16)]
 
-    if args.scheduler != "cosine_anneal_warmup":
+    if args.scheduler == "cosine_anneal_warmup":
         adjust_learning_rate(optimizer=optimizer, current_epoch=epoch, max_epoch=args.epochs, lr_min=0.00001,
                              lr_max=0.1, warmup=True)
 
