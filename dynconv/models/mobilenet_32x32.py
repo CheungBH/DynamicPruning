@@ -156,17 +156,19 @@ class InvertedResidualBlock(nn.Module):
         return m
 
     def forward_channel_pruning(self, x, meta):
+
         vector = self.saliency(x, meta)
+
+        conv_forward(self.conv_pw_1, None, None, vector, forward=False)
+        conv_forward(self.conv3x3_dw, None, None, vector, forward=False)
+        conv_forward(self.conv_pw_2, None, vector, None, forward=False)
+
         x = self.activation(self.bn1(self.conv_pw_1(x)))
         x = channel_process(x, vector)
         x = self.activation(self.bn_dw(self.conv3x3_dw(x)))
         x = channel_process(x, vector)
         x = self.bn2(self.conv_pw_2(x))
         meta["saliency_mask"] = None
-
-        conv_forward(self.conv_pw_1, None, None, vector, forward=False)
-        conv_forward(self.conv3x3_dw, None, vector, vector, forward=False)
-        conv_forward(self.conv_pw_2, None, vector, None, forward=False)
 
         return x
 
@@ -183,19 +185,19 @@ class InvertedResidualBlock(nn.Module):
             mask_dilate, mask = m['dilate'], m['std']
             if self.channel_budget > 0:
                 vector = self.saliency(x, meta)
+                conv_forward(self.conv_pw_1, None, None, vector, forward=False)
+                conv_forward(self.conv3x3_dw, None, None, vector, forward=False)
+                conv_forward(self.conv_pw_2, None, vector, None, forward=False)
 
             x = dynconv.conv1x1(self.conv_pw_1, x, mask, mask_dilate)
             x = dynconv.bn_relu(self.bn1, self.activation, x, mask_dilate)
             x = dynconv.apply_mask(x, mask_dilate) if self.input_resolution else x
             if self.channel_budget > 0:
                 x = channel_process(x, vector)
-                conv_forward(self.conv_pw_1, None, None, vector, forward=False)
             x = dynconv.conv3x3_dw(self.conv3x3_dw, x, mask_dilate, mask)
             x = dynconv.bn_relu(self.bn_dw, self.activation, x, mask)
             if self.channel_budget > 0:
                 x = channel_process(x, vector)
-                conv_forward(self.conv3x3_dw, None, vector, vector, forward=False)
-                conv_forward(self.conv_pw_2, None, vector, None, forward=False)
             x = dynconv.conv1x1(self.conv_pw_2, x, mask_dilate, mask)
             x = dynconv.bn_relu(self.bn2, None, x, mask)
             meta["saliency_mask"] = self.get_masked_feature(x, mask.hard)
