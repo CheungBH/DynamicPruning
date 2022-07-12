@@ -2,7 +2,7 @@
 
 class SimpleArguments:
     def __init__(self):
-        self.data_root = "/media/hkuit155/NewDisk/imagenet"
+        self.data_root = ""
         self.pretrain_weight = ""
         self.load_weight = ""
 
@@ -50,7 +50,7 @@ class SimpleArguments:
         if not args.evaluate:
             if args.load == "pretrain":
                 args.load = self.pretrain_weight
-            elif self.load_weight:
+            elif self.load_weight and args.load == "default":
                 print("Replacing weight checkpoint: {} -> {}".format(args.load, self.load_weight))
                 args.load = self.load_weight
         return args
