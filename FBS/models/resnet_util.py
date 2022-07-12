@@ -6,7 +6,7 @@ try:
 except ImportError:
     from torch.utils.model_zoo import load_url as load_state_dict_from_url
 # import models.resnet_util
-from models.channel_saliency import conv_forward, bn_relu_foward, channel_process, ChannelVectorUnit
+from models.channel_saliency import conv_forward, bn_relu_foward, channel_process, ChannelVectorUnit, GumbelChannelUnit
 
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
@@ -76,6 +76,7 @@ class BasicBlock(nn.Module):
         out = self.relu(out)
         return out, meta
 
+
 class Bottleneck(nn.Module):
     expansion = 4
 
@@ -114,11 +115,12 @@ class Bottleneck(nn.Module):
                 return
             else:
                 if mask_type == "fc":
-                    if not input_resolution:
-                        self.saliency = ChannelVectorUnit(in_channels=inplanes, out_channels=planes,
-                                                          group_size=group_size, budget=self.budget, **kwargs)
-                    else:
-                        raise NotImplementedError
+                    self.saliency = ChannelVectorUnit(in_channels=inplanes, out_channels=planes, group_size=group_size,
+                                                      budget=self.budget, **kwargs)
+                elif mask_type == "fc_gumbel":
+                    self.saliency = GumbelChannelUnit(inplanes=inplanes, outplanes=planes, group_size=group_size,
+                                                      budget=self.budget, **kwargs)
+
                 else:
                     raise NotImplementedError
         else:

@@ -1,6 +1,82 @@
 import torch.nn as nn
 import math
 import torch
+from torch.autograd import Variable
+
+
+class GumbelSoftmax(nn.Module):
+    '''
+        gumbel softmax gate.
+    '''
+
+    def __init__(self, eps=1.0):
+        super(GumbelSoftmax, self).__init__()
+        self.eps = eps
+        self.sigmoid = nn.Sigmoid()
+
+    def gumbel_sample(self, template_tensor, eps=1e-8):
+        uniform_samples_tensor = template_tensor.clone().uniform_()
+        gumble_samples_tensor = torch.log(uniform_samples_tensor + eps) - torch.log(
+            1 - uniform_samples_tensor + eps)
+        return gumble_samples_tensor
+
+    def gumbel_softmax(self, logits):
+        """ Draw a sample from the Gumbel-Softmax distribution"""
+        gsamples = self.gumbel_sample(logits.data)
+        logits = logits + Variable(gsamples)
+        soft_samples = self.sigmoid(logits / self.eps)
+        return soft_samples, logits
+
+    def forward(self, logits):
+        if not self.training:
+            out_hard = (logits >= 0).float()
+            return out_hard
+        out_soft, prob_soft = self.gumbel_softmax(logits)
+        out_hard = ((out_soft >= 0.5).float() - out_soft).detach() + out_soft
+        return out_hard
+
+
+def expand(x, group_size):
+    bs, vec_size = x.shape
+    return x.unsqueeze(dim=-1).expand(bs, vec_size, group_size).reshape(bs, vec_size*group_size)
+
+
+class GumbelChannelUnit(nn.Module):
+    '''
+        Attention Mask.
+    '''
+
+    def __init__(self, inplanes, outplanes, group_size=4, eps=0.66667, budget=-1, bias=-1, target_stage=[-1], **kwargs):
+        super(GumbelChannelUnit, self).__init__()
+        # Parameter
+        # self.bottleneck = inplanes // fc_reduction
+        self.inplanes, self.outplanes = inplanes, outplanes
+        self.eleNum_c = torch.Tensor([outplanes])
+        # channel attention
+        self.avg_pool = MaskedAvePooling()
+        self.channel_saliency_predictor = nn.Linear(inplanes, outplanes//group_size)
+        self.target_stage = target_stage
+        self.group_size = group_size
+
+        # if bias >= 0:
+        #     nn.init.constant_(self.atten_c[3].bias, bias)
+        # Gate
+        self.gumbel = GumbelSoftmax(eps=eps)
+        # Norm
+        # self.norm = lambda x: torch.norm(x, p=1, dim=(1, 2, 3))
+
+    def forward(self, x, meta):
+        if meta["stage_id"] not in self.target_stage:
+            return torch.ones(x.shape[0], self.outplanes).cuda()
+        batch, channel, _, _ = x.size()
+        context = self.avg_pool(x, meta["masked_feat"]).squeeze()  # [N, C, 1, 1]
+        # transform
+        context = context.unsqueeze(dim=0) if batch == 1 else context
+        c_in = self.channel_saliency_predictor(context)  # [N, C_out, 1, 1]
+        # channel gate
+        mask_c = self.gumbel(c_in)  # [N, C_out, 1, 1]
+        mask_c = expand(mask_c, self.group_size)
+        return mask_c
 
 
 class MaskedAvePooling(nn.Module):
@@ -42,12 +118,8 @@ class ChannelVectorUnit(nn.Module):
         x = self.sigmoid(x)
         meta["lasso_sum"] += torch.mean(torch.sum(x, dim=-1))
         x = self.winner_take_all(x.clone())
-        x = self.expand(x)
+        x = expand(x, self.group_size)
         return x
-
-    def expand(self, x):
-        bs, vec_size = x.shape
-        return x.unsqueeze(dim=-1).expand(bs, vec_size, self.group_size).reshape(bs, vec_size*self.group_size)
 
     def winner_take_all(self, x):
         if self.sparsity >= 1.0:
@@ -89,11 +161,3 @@ def vector_ratio(vector):
         return 1
     return torch.true_divide(vector.sum(), vector.numel()).tolist()
 
-# def winner_take_all(x, sparsity_ratio):
-#     if sparsity_ratio < 1.0:
-#         k = math.ceil((1-sparsity_ratio) * x.size(-1))
-#         inactive_idx = (-x).topk(k-1, 1)[1]
-#         zero_filtered = x.scatter_(1, inactive_idx, 0)
-#         return (zero_filtered > 0).int()
-#     else:
-#         return x
