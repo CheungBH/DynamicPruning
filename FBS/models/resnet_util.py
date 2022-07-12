@@ -168,8 +168,8 @@ class Bottleneck(nn.Module):
             #     else:
             #         m = meta["masks"][-1]
         else:
-            vector = self.saliency(x, meta)
-        return vector
+            vector, meta = self.saliency(x, meta)
+        return vector, meta
 
     def forward(self, input):
         x, meta = input
@@ -193,7 +193,7 @@ class Bottleneck(nn.Module):
                 meta["feat_after"].append(out)
         else:
             assert meta is not None
-            vector = self.obtain_vector(x, meta)
+            vector, meta = self.obtain_vector(x, meta)
 
             out = conv_forward(self.conv1, x, out_vec=vector)
             out = bn_relu_foward(self.bn1, self.relu, out, vector)

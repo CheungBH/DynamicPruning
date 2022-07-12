@@ -67,7 +67,7 @@ class GumbelChannelUnit(nn.Module):
 
     def forward(self, x, meta):
         if meta["stage_id"] not in self.target_stage:
-            return torch.ones(x.shape[0], self.outplanes).cuda()
+            return torch.ones(x.shape[0], self.outplanes).cuda(), meta
         batch, channel, _, _ = x.size()
         context = self.avg_pool(x, meta["masked_feat"]).squeeze()  # [N, C, 1, 1]
         # transform
@@ -75,8 +75,9 @@ class GumbelChannelUnit(nn.Module):
         c_in = self.channel_saliency_predictor(context)  # [N, C_out, 1, 1]
         # channel gate
         mask_c = self.gumbel(c_in)  # [N, C_out, 1, 1]
+        meta["channel_vector"].append(mask_c)
         mask_c = expand(mask_c, self.group_size)
-        return mask_c
+        return mask_c, meta
 
 
 class MaskedAvePooling(nn.Module):
@@ -109,7 +110,7 @@ class ChannelVectorUnit(nn.Module):
 
     def forward(self, x, meta):
         if meta["stage_id"] not in self.target_stage:
-            return torch.ones(x.shape[0], self.out_channels).cuda()
+            return torch.ones(x.shape[0], self.out_channels).cuda(), meta
         if isinstance(self.pooling, MaskedAvePooling):
             x = self.pooling(x, meta["masked_feat"]).squeeze()
         else:
@@ -119,7 +120,7 @@ class ChannelVectorUnit(nn.Module):
         meta["lasso_sum"] += torch.mean(torch.sum(x, dim=-1))
         x = self.winner_take_all(x.clone())
         x = expand(x, self.group_size)
-        return x
+        return x, meta
 
     def winner_take_all(self, x):
         if self.sparsity >= 1.0:

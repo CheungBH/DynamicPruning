@@ -98,7 +98,7 @@ def main():
                        group_size=args.group_size).to(device=device)
 
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0,
-            "feat_before": [], "feat_after": [], "lasso_sum": 0}
+            "feat_before": [], "feat_after": [], "lasso_sum": 0, "channel_vector": []}
     _ = model(torch.rand((2, 3, res, res)).cuda(), meta)
 
     ## CRITERION
@@ -108,7 +108,7 @@ def main():
             self.task_loss = nn.CrossEntropyLoss().to(device=device)
             # self.sparsity_loss = dynconv.SparsityCriterion(args.budget, **kwargs) \
             #     if args.budget >= 0 and "stat" not in args.mask_type else None
-            self.sparsity_loss = None
+            self.sparsity_loss = True
             self.budget = budget
             self.net_weight = net_weight
             self.block_weight = block_weight
@@ -118,18 +118,19 @@ def main():
 
         def forward(self, output, target, meta, phase="train"):
             global iteration
-            task_loss, loss_block, loss_net, layer_percents = self.task_loss(output, target), torch.zeros(1).cuda(), \
-                                                              torch.zeros(1).cuda(), []
+            task_loss, loss_net, layer_percents = self.task_loss(output, target), torch.zeros(1).cuda(), []
             if self.sparsity_loss is not None:
-                loss_net, loss_block, layer_percents = self.sparsity_loss(meta)
-            sparse_loss = loss_block * self.block_weight + loss_net * self.net_weight
+                for vector in meta["channel_vector"]:
+                    layer_percent = torch.true_divide(vector.sum(), vector.numel())
+                    layer_percents.append(layer_percent)
+                    assert layer_percent >= 0 and layer_percent <= 1, layer_percent
+                    loss_net += max(0, layer_percent - self.budget) ** 2
 
             if self.tb_writer and phase == "train":
                 self.tb_writer.add_scalar("{}/task loss".format(phase), task_loss, iteration)
                 self.tb_writer.add_scalar("{}/network loss".format(phase), loss_net, iteration)
-                self.tb_writer.add_scalar("{}/block loss".format(phase), loss_block, iteration)
                 iteration += 1
-            return task_loss, sparse_loss, layer_percents
+            return task_loss, loss_net, layer_percents
 
     if not args.evaluate:
         transform_train = transforms.Compose([
@@ -345,17 +346,17 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
 
         # compute output
         meta = {'masks': [], 'device': device, 'gumbel_temp': gumbel_temp, 'gumbel_noise': gumbel_noise, 'epoch': epoch,
-                "lasso_sum": 0}
+                "lasso_sum": 0, "channel_vector": []}
         output, meta = model(input, meta)
-        # t_loss, s_loss, layer_percents = criterion(output, target, meta)
-        t_loss = criterion(output, target)
+        t_loss, s_loss, layer_percents = criterion(output, target, meta)
+        # t_loss = criterion(output, target)
         prec1 = utils.accuracy(output.data, target)[0]
         top1.update(prec1.item(), input.size(0))
         task_loss_record.update(t_loss.item(), input.size(0))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
-        loss = args.lasso_lambda * meta["lasso_sum"] + t_loss
+        loss = args.lasso_lambda * s_loss + t_loss
 
         if mix_precision:
             with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -403,7 +404,7 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
 
             # compute output
             meta = {'masks': [], 'device': device, 'gumbel_temp': 1.0, 'gumbel_noise': False, 'epoch': epoch,
-                    "feat_before": [], "feat_after": [], "lasso_sum": 0}
+                    "feat_before": [], "feat_after": [], "lasso_sum": 0, "channel_vector": []}
             output, meta = model(input, meta)
             output = output.float()
             t_loss = criterion(output, target)
