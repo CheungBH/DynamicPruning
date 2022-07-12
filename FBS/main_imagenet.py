@@ -22,7 +22,7 @@ from torch.backends import cudnn as cudnn
 
 from apex import amp
 
-mix_precision = True
+mix_precision = False
 
 cudnn.benchmark = True
 device = 'cuda'
@@ -407,8 +407,8 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
                     "feat_before": [], "feat_after": [], "lasso_sum": 0, "channel_vector": []}
             output, meta = model(input, meta)
             output = output.float()
-            t_loss = criterion(output, target)
-            # t_loss, s_loss, layer_percents = criterion(output, target, meta, phase="")
+            # t_loss = criterion(output, target)
+            t_loss, s_loss, layer_percents = criterion(output, target, meta, phase="")
             task_loss_record.update(t_loss.item(), input.size(0))
             # sparse_loss_record.update(s_loss.item(), input.size(0))
             # for layer_per, recorder in zip(layer_percents, layer_sparsity_records):
