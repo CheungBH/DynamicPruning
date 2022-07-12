@@ -2,6 +2,7 @@ import argparse
 import os.path
 import sys
 import matplotlib.pyplot as plt
+import h5py, shutil
 
 import dataloader.imagenet
 import dynconv
@@ -438,7 +439,6 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
     sparse_loss_record = utils.AverageMeter()
     layer_sparsity_records = [utils.AverageMeter() for _ in range(16)]
 
-    import h5py, shutil
     channel_files = []
     target_stages = [(3, 1), (3, 2)]
 

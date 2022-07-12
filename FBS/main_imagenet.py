@@ -101,13 +101,12 @@ def main():
             "feat_before": [], "feat_after": [], "lasso_sum": 0, "channel_vector": []}
     _ = model(torch.rand((2, 3, res, res)).cuda(), meta)
 
+
     ## CRITERION
     class Loss(nn.Module):
         def __init__(self, budget, net_weight, block_weight, tensorboard_folder="", **kwargs):
             super(Loss, self).__init__()
             self.task_loss = nn.CrossEntropyLoss().to(device=device)
-            # self.sparsity_loss = dynconv.SparsityCriterion(args.budget, **kwargs) \
-            #     if args.budget >= 0 and "stat" not in args.mask_type else None
             self.sparsity_loss = True
             self.budget = budget
             self.net_weight = net_weight
@@ -174,11 +173,11 @@ def main():
         f.write(cmd + "\n")
         print('Args:', args, file=f)
         f.write("\n")
-    # criterion = Loss(args.budget, net_weight=args.sparse_weight, block_weight=args.layer_weight, num_epochs=args.epochs,
-    #                  strategy=args.sparse_strategy, valid_range=args.valid_range, static_range=args.static_range,
-    #                  tensorboard_folder=tb_folder, unlimited_lower=args.unlimited_lower,
-    #                  layer_loss_method=args.layer_loss_method)
-    criterion = nn.CrossEntropyLoss().to(device=device)
+
+    criterion = Loss(args.budget, net_weight=args.sparse_weight, block_weight=args.layer_weight, num_epochs=args.epochs,
+                     strategy=args.sparse_strategy, valid_range=args.valid_range, static_range=args.static_range,
+                     tensorboard_folder=tb_folder, unlimited_lower=args.unlimited_lower,
+                     layer_loss_method=args.layer_loss_method)
 
     ## OPTIMIZER
     if args.optim == "sgd":

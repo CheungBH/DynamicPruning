@@ -153,7 +153,7 @@ class MobileNetV2(nn.Module):
         block_sum = sum([s[2] for s in inverted_residual_setting])
         if kwargs['channel_stage'][-1] == -1:
             if len(kwargs['channel_stage']) == 2:
-                kwargs['channel_stage'] = [kwargs['channel_stage'][0], block_sum-1]
+                kwargs['channel_stage'] = list(range(block_sum)[kwargs['channel_stage'][0]: block_sum])
             else:
                 raise ValueError("Not correct stage idx for -1")
 
