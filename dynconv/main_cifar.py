@@ -138,7 +138,7 @@ def main():
                        dropout_stages=args.dropout_stages, dropout_ratio=args.dropout_ratio,
                        use_downsample=args.use_downsample, final_activation=args.final_activation).to(device=device)
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0,
-            "feat_before": [], "feat_after": [], "lasso_sum": 0, "channel_prediction": {}}
+            "feat_before": [], "feat_after": [], "lasso_sum": torch.zeros(1).cuda(), "channel_prediction": {}}
     _ = model(torch.rand((2, 3, res, res)).cuda(), meta)
 
     file_path = os.path.join(args.save_dir, "log.txt")
@@ -343,11 +343,11 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
                              lr_max=0.1, warmup_epoch=10)
 
     if epoch < 0.5 * args.epochs:
-        gumbel_temp = 5.0
-    elif epoch < 0.8 * args.epochs:
         gumbel_temp = 2.5
-    else:
+    elif epoch < 0.8 * args.epochs:
         gumbel_temp = 1
+    else:
+        gumbel_temp = 0.6667
     gumbel_noise = False if epoch > 0.8 * args.epochs else True
 
     num_step = len(train_loader)
@@ -358,7 +358,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
 
         # compute output
         meta = {'masks': [], 'device': device, 'gumbel_temp': gumbel_temp, 'gumbel_noise': gumbel_noise,
-                'epoch': epoch, "lasso_sum": 0, "channel_prediction": {}}
+                'epoch': epoch, "lasso_sum": torch.zeros(1).cuda(), "channel_prediction": {}}
         output, meta = model(input, meta)
         t_loss, s_loss, s_percents, c_loss, c_percents = criterion(output, target, meta)
         prec1, prec5 = utils.accuracy(output.data, target, topk=(1, 5))
@@ -436,7 +436,7 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
 
             # compute output
             meta = {'masks': [], 'device': device, 'gumbel_temp': 1.0, 'gumbel_noise': False, 'epoch': epoch,
-                    "feat_before": [], "feat_after": [], "lasso_sum": 0, "channel_prediction": {}}
+                    "feat_before": [], "feat_after": [], "lasso_sum": torch.zeros(1).cuda(), "channel_prediction": {}}
             output, meta = model(input, meta)
             output = output.float()
             t_loss, s_loss, s_percents, c_loss, c_percents = criterion(output, target, meta)

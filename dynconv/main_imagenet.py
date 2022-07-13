@@ -380,12 +380,12 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
                              lr_max=0.01, warmup=True)
     print('current lr {:.5e}'.format(optimizer.param_groups[0]['lr']))
 
-    if epoch < 0.5*args.epochs:
-        gumbel_temp = 5.0
-    elif epoch < 0.8*args.epochs:
+    if epoch < 0.5 * args.epochs:
         gumbel_temp = 2.5
-    else:
+    elif epoch < 0.8 * args.epochs:
         gumbel_temp = 1
+    else:
+        gumbel_temp = 0.6667
     gumbel_noise = False if epoch > 0.8*args.epochs else True
 
     num_step =  len(train_loader)
