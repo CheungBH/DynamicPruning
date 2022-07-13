@@ -157,7 +157,9 @@ class Bottleneck(nn.Module):
                 else:
                     raise NotImplementedError
         else:
-            if mask_type == "none" or mask_type == "conv":
+            if mask_type == "none":
+                self.mask = NoneMask()
+            elif mask_type == "conv" and budget == -1:
                 self.mask = NoneMask()
             elif mask_type == "zero_ratio":
                 self.mask = ZeroRatioMask(**kwargs)

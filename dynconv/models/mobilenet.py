@@ -151,11 +151,12 @@ class MobileNetV2(nn.Module):
 
         features = []
         block_sum = sum([s[2] for s in inverted_residual_setting])
-        if kwargs['channel_stage'][-1] == -1:
-            if len(kwargs['channel_stage']) == 2:
-                kwargs['channel_stage'] = list(range(block_sum)[kwargs['channel_stage'][0]: block_sum])
-            else:
-                raise ValueError("Not correct stage idx for -1")
+        if kwargs['channel_stage'] is not None:
+            if kwargs['channel_stage'][-1] == -1:
+                if len(kwargs['channel_stage']) == 2:
+                    kwargs['channel_stage'] = list(range(block_sum)[kwargs['channel_stage'][0]: block_sum])
+                else:
+                    raise ValueError("Not correct stage idx for -1")
 
         # building inverted residual blocks
         for stage_idx, (t, c, n, s) in enumerate(inverted_residual_setting):
