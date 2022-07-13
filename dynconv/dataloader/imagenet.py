@@ -59,11 +59,7 @@ class IN1K(torch.utils.data.Dataset):
                 cls = osp.basename(osp.dirname(im))
                 self.labels.append(self.class_to_idx[cls])
 
-
         elif split == 'val':
-            self.imgs = [osp.relpath(f, root)
-                         for f in glob(osp.join(root, 'val', '*.JPEG'))]
-            self.imgs.sort()
             ilsvrc_labels = np.loadtxt(osp.join(root,
                                                 'ILSVRC2012_devkit_t12',
                                                 'data',
@@ -71,7 +67,16 @@ class IN1K(torch.utils.data.Dataset):
                                                 ), dtype=int)
 
             self.labels = [self.ilsvrc_label_to_label[label] for label in ilsvrc_labels]
-            assert len(self.imgs) == len(self.labels)
+            try:
+                self.imgs = [osp.relpath(f, root)
+                             for f in glob(osp.join(root, 'val', '*.JPEG'))]
+                self.imgs.sort()
+                assert len(self.imgs) == len(self.labels)
+            except AssertionError:
+                self.imgs = [osp.relpath(f, root)
+                             for f in glob(osp.join(root, 'validation', '*.JPEG'))]
+                self.imgs.sort()
+                assert len(self.imgs) == len(self.labels)
             sort_by_label = sorted(zip(self.labels, self.imgs))
             self.labels, self.imgs = list(zip(*sort_by_label))
 
