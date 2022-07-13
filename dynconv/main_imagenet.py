@@ -34,7 +34,7 @@ iteration = 0
 def adjust_learning_rate(optimizer, current_epoch, max_epoch, lr_min=0.0, lr_max=0.1, warmup=True):
     warmup_epoch = 5 if warmup else 0
     if current_epoch < warmup_epoch:
-        lr = lr_max * current_epoch / warmup_epoch
+        lr = (lr_max-lr_min) * (current_epoch+1) / warmup_epoch
     else:
         lr = lr_min + (lr_max - lr_min) * (
                     1 + cos(pi * (current_epoch - warmup_epoch) / (max_epoch - warmup_epoch))) / 2
