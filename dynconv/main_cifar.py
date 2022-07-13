@@ -24,16 +24,6 @@ cudnn.benchmark = True
 iteration = 0
 device = 'cuda:0'
 
-def adjust_learning_rate(optimizer, current_epoch, max_epoch, lr_min=0.0, lr_max=0.1, warmup=True):
-    warmup_epoch = 10 if warmup else 0
-    if current_epoch < warmup_epoch:
-        lr = lr_max * current_epoch / warmup_epoch
-    else:
-        lr = lr_min + (lr_max - lr_min) * (
-                    1 + cos(pi * (current_epoch - warmup_epoch) / (max_epoch - warmup_epoch))) / 2
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-
 
 def main():
     global iteration
@@ -349,8 +339,8 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     channel_sparsity_records = [utils.AverageMeter() for _ in range(layer_cnt)]
 
     if args.scheduler == "cosine_anneal_warmup":
-        adjust_learning_rate(optimizer=optimizer, current_epoch=epoch, max_epoch=args.epochs, lr_min=0.00001,
-                             lr_max=0.1, warmup=True)
+        utils.adjust_learning_rate(optimizer=optimizer, current_epoch=epoch, max_epoch=args.epochs, lr_min=0.00001,
+                             lr_max=0.1, warmup_epoch=10)
 
     if epoch < 0.5 * args.epochs:
         gumbel_temp = 5.0

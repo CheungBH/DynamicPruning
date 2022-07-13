@@ -21,7 +21,6 @@ import utils.utils as utils
 import utils.viz as viz
 from torch.backends import cudnn as cudnn
 from simple_args import SimpleArguments
-from math import cos, pi
 
 from apex import amp
 mix_precision = False
@@ -29,17 +28,6 @@ mix_precision = False
 cudnn.benchmark = True
 device='cuda'
 iteration = 0
-
-
-def adjust_learning_rate(optimizer, current_epoch, max_epoch, lr_min=0.0, lr_max=0.1, warmup=True):
-    warmup_epoch = 5 if warmup else 0
-    if current_epoch < warmup_epoch:
-        lr = (lr_max-lr_min) * (current_epoch+1) / warmup_epoch
-    else:
-        lr = lr_min + (lr_max - lr_min) * (
-                    1 + cos(pi * (current_epoch - warmup_epoch) / (max_epoch - warmup_epoch))) / 2
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
 
 
 def main():
@@ -388,7 +376,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     channel_sparsity_records = [utils.AverageMeter() for _ in range(layer_cnt)]
 
     if args.scheduler == "cosine_anneal_warmup":
-        adjust_learning_rate(optimizer=optimizer, current_epoch=epoch, max_epoch=args.epochs, lr_min=0.00001,
+        utils.adjust_learning_rate(optimizer=optimizer, current_epoch=epoch, max_epoch=args.epochs, lr_min=0.00001,
                              lr_max=0.01, warmup=True)
     print('current lr {:.5e}'.format(optimizer.param_groups[0]['lr']))
 
