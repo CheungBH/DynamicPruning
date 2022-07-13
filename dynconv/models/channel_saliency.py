@@ -124,7 +124,7 @@ class ChannelVectorUnit(nn.Module):
 
     def forward(self, x, meta):
         if meta["stage_id"] not in self.target_stage:
-            return torch.ones(x.shape[0], self.out_channels).cuda()
+            return torch.ones(x.shape[0], self.out_channels).cuda(), meta
         x = self.pooling(x, meta["saliency_mask"]).squeeze()
         x = self.channel_saliency_predictor(x)
         x = self.sigmoid(x)
@@ -133,7 +133,7 @@ class ChannelVectorUnit(nn.Module):
         x = self.winner_take_all(x.clone())
         meta["channel_prediction"][(meta["stage_id"], meta["block_id"])] = x
         x = self.expand(x)
-        return x
+        return x, meta
 
     def expand(self, x):
         bs, vec_size = x.shape
