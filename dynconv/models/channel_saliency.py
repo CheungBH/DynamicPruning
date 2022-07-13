@@ -46,7 +46,7 @@ class GumbelChannelUnit(nn.Module):
         Attention Mask.
     '''
 
-    def __init__(self, inplanes, outplanes, group_size=4, eps=0.66667, budget=-1, bias=-1, target_stage=[-1], **kwargs):
+    def __init__(self, inplanes, outplanes, group_size=4, eps=0.66667, budget=-1, bias=-1, channel_stage=[-1], **kwargs):
         super(GumbelChannelUnit, self).__init__()
         # Parameter
         # self.bottleneck = inplanes // fc_reduction
@@ -55,7 +55,7 @@ class GumbelChannelUnit(nn.Module):
         # channel attention
         self.avg_pool = MaskedAvePooling()
         self.channel_saliency_predictor = nn.Linear(inplanes, outplanes//group_size)
-        self.target_stage = target_stage
+        self.target_stage = channel_stage
         self.group_size = group_size
 
         # if bias >= 0:
@@ -69,13 +69,13 @@ class GumbelChannelUnit(nn.Module):
         if meta["stage_id"] not in self.target_stage:
             return torch.ones(x.shape[0], self.outplanes).cuda(), meta
         batch, channel, _, _ = x.size()
-        context = self.avg_pool(x, meta["masked_feat"]).squeeze()  # [N, C, 1, 1]
+        context = self.avg_pool(x, meta["saliency_mask"]).squeeze()  # [N, C, 1, 1]
         # transform
         context = context.unsqueeze(dim=0) if batch == 1 else context
         c_in = self.channel_saliency_predictor(context)  # [N, C_out, 1, 1]
         # channel gate
         mask_c = self.gumbel(c_in)  # [N, C_out, 1, 1]
-        meta["channel_vector"].append(mask_c)
+        meta["channel_prediction"][(meta["stage_id"], meta["block_id"])] = x
         mask_c = expand(mask_c, self.group_size)
         return mask_c, meta
 

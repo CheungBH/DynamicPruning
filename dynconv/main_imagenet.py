@@ -181,7 +181,7 @@ def main():
             channel_loss = torch.zeros(1).cuda()
             if 0 < self.channel_budget < 1:
                 channel_percents = []
-                for vector in meta["channel_vector"]:
+                for vector in meta["channel_prediction"]:
                     layer_percent = torch.true_divide(vector.sum(), vector.numel())
                     channel_percents.append(layer_percent)
                     assert layer_percent >= 0 and layer_percent <= 1, layer_percent

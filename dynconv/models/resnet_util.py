@@ -240,7 +240,7 @@ class Bottleneck(nn.Module):
             mask_dilate, mask = m['dilate'], m['std']
 
             if self.channel_budget > 0:
-                vector = self.saliency(x, meta)
+                vector, meta = self.saliency(x, meta)
                 conv_forward(self.conv1, None, None, vector, forward=False)
                 conv_forward(self.conv2, None, vector, vector, forward=False)
                 conv_forward(self.conv3, None, vector, None, forward=False)
