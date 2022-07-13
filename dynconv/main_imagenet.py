@@ -140,7 +140,7 @@ def main():
                        use_downsample=args.use_downsample, final_activation=args.final_activation).to(device=device)
 
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0,
-            "feat_before": [], "feat_after": [], "lasso_sum": 0, "channel_prediction": {}}
+            "feat_before": [], "feat_after": [], "lasso_sum": torch.zeros(1), "channel_prediction": {}}
     _ = model(torch.rand((2, 3, res, res)).cuda(), meta)
 
 
@@ -180,7 +180,7 @@ def main():
         def get_channel_loss(self, meta):
             channel_loss, channel_percents = torch.zeros(1).cuda(), []
             if 0 < self.channel_budget < 1:
-                for vector in meta["channel_prediction"]:
+                for _, vector in meta["channel_prediction"].items():
                     layer_percent = torch.true_divide(vector.sum(), vector.numel())
                     channel_percents.append(layer_percent)
                     assert layer_percent >= 0 and layer_percent <= 1, layer_percent
@@ -211,6 +211,7 @@ def main():
         train_loader = torch.utils.data.DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=args.workers, pin_memory=False)
         args.feat_save_dir = ""
     else:
+        args.save_dir = ""
         if args.plot_save_dir:
             os.makedirs(args.plot_save_dir, exist_ok=True)
             args.batchsize = 1
@@ -229,11 +230,12 @@ def main():
     val_loader = torch.utils.data.DataLoader(valset, batch_size=args.batchsize, shuffle=True, num_workers=args.workers, pin_memory=False)
 
     file_path = os.path.join(args.save_dir, "log.txt")
-    cmd = utils.generate_cmd(sys.argv[1:])
-    with open(file_path, "a+") as f:
-        f.write(cmd + "\n")
-        print('Args:', args, file=f)
-        f.write("\n")
+    if args.save_dir:
+        cmd = utils.generate_cmd(sys.argv[1:])
+        with open(file_path, "a+") as f:
+            f.write(cmd + "\n")
+            print('Args:', args, file=f)
+            f.write("\n")
 
     ## OPTIMIZER
     if args.optim == "sgd":
@@ -416,7 +418,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
 
         # compute output
         meta = {'masks': [], 'device': device, 'gumbel_temp': gumbel_temp, 'gumbel_noise': gumbel_noise, 'epoch': epoch,
-                "lasso_sum": 0, "channel_prediction": {}}
+                "lasso_sum": torch.zeros(1), "channel_prediction": {}}
         output, meta = model(input, meta)
         t_loss, s_loss, s_percents, c_loss, c_percents = criterion(output, target, meta)
         prec1 = utils.accuracy(output.data, target)[0]
@@ -503,7 +505,7 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
 
             # compute output
             meta = {'masks': [], 'device': device, 'gumbel_temp': 1.0, 'gumbel_noise': False, 'epoch': epoch,
-                    "feat_before": [], "feat_after": [], "lasso_sum": 0, "channel_prediction": {}}
+                    "feat_before": [], "feat_after": [], "lasso_sum": torch.zeros(1), "channel_prediction": {}}
             output, meta = model(input, meta)
             record_channels(img_path, meta['channel_prediction'], channel_files)
             output = output.float()
