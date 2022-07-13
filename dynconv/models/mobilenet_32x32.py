@@ -1,7 +1,7 @@
 from torch import nn
 import dynconv
 import torch
-from models.channel_saliency import conv_forward, bn_relu_foward, channel_process, ChannelVectorUnit
+from models.channel_saliency import conv_forward, bn_relu_foward, channel_process, ChannelVectorUnit, GumbelChannelUnit
 
 
 def _make_divisible(v, divisor, min_value=None):
@@ -91,6 +91,10 @@ class InvertedResidualBlock(nn.Module):
                 if channel_unit_type == "fc":
                     self.saliency = ChannelVectorUnit(in_channels=inp, out_channels=hidden_dim,
                                                       group_size=group_size, channel_budget=channel_budget, **kwargs)
+                elif channel_unit_type == "fc_gumbel":
+                    self.saliency = GumbelChannelUnit(inplanes=inp, outplanes=hidden_dim, group_size=group_size,
+                                                      budget=channel_budget, **kwargs)
+
                 else:
                     raise NotImplementedError
                 
