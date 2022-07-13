@@ -390,6 +390,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     """
     model.train()
     top1 = utils.AverageMeter()
+    top5 = utils.AverageMeter()
     task_loss_record = utils.AverageMeter()
     spatial_loss_record = utils.AverageMeter()
     channel_loss_record = utils.AverageMeter()
@@ -421,8 +422,9 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
                 "lasso_sum": torch.zeros(1), "channel_prediction": {}}
         output, meta = model(input, meta)
         t_loss, s_loss, s_percents, c_loss, c_percents = criterion(output, target, meta)
-        prec1 = utils.accuracy(output.data, target)[0]
+        prec1, prec5 = utils.accuracy(output.data, target, topk=(1, 5))
         top1.update(prec1.item(), input.size(0))
+        top5.update(prec5.item(), input.size(0))
         task_loss_record.update(t_loss.item(), input.size(0))
         spatial_loss_record.update(s_loss.item(), input.size(0))
         channel_loss_record.update(c_loss.item(), input.size(0))
@@ -451,8 +453,9 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     if file_path:
         with open(file_path, "a+") as f:
             logger.tick(f)
-            f.write("Train: Epoch {}, Prec@1 {}, task loss {}, sparse loss {}\n".format
-                    (epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(spatial_loss_record.avg, 4)))
+            f.write("Train: Epoch {}, Prec@1 {}, Prec@5 {}, task loss {}, sparse loss {}\n".format
+                    (epoch, round(top1.avg, 4), round(top5.avg, 4), round(task_loss_record.avg, 4),
+                     round(spatial_loss_record.avg, 4)))
             f.write("Train Spatial Percentage: {}\n".format(spatial_layer_str))
             f.write("Train Channel Percentage: {}\n".format(channel_layer_str))
 
@@ -472,7 +475,7 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
     """
     Run evaluation
     """
-    top1 = utils.AverageMeter()
+    top1, top5 = utils.AverageMeter(), utils.AverageMeter()
     task_loss_record = utils.AverageMeter()
     spatial_loss_record = utils.AverageMeter()
     channel_loss_record = utils.AverageMeter()
@@ -510,8 +513,9 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
             record_channels(img_path, meta['channel_prediction'], channel_files)
             output = output.float()
             t_loss, s_loss, s_percents, c_loss, c_percents = criterion(output, target, meta)
-            prec1 = utils.accuracy(output.data, target)[0]
+            prec1, prec5 = utils.accuracy(output.data, target, topk=(1, 5))
             top1.update(prec1.item(), input.size(0))
+            top5.update(prec5.item(), input.size(0))
             task_loss_record.update(t_loss.item(), input.size(0))
             spatial_loss_record.update(s_loss.item(), input.size(0))
             channel_loss_record.update(c_loss.item(), input.size(0))
@@ -554,8 +558,9 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
     model.stop_flops_count()
     if file_path:
         with open(file_path, "a+") as f:
-            f.write("Validation: Epoch {}, Prec@1 {}, task loss {}, sparse loss {}, ave FLOPS per image: {} MMac\n".
-                    format(epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(spatial_loss_record.avg, 4),
+            f.write("Validation: Epoch {}, Prec@1 {}, Prec@5 {}, task loss {}, sparse loss {}, ave FLOPS per image: {} MMac\n".
+                    format(epoch, round(top1.avg, 4), round(top1.avg, 4), round(top5.avg, 4),
+                           round(task_loss_record.avg, 4), round(spatial_loss_record.avg, 4),
                            round(model.compute_average_flops_cost()[0]/1e6), 6))
             f.write("Validation Spatial percentage: {}\n".format(spatial_layer_str))
             f.write("Validation Channel percentage: {}\n".format(channel_layer_str))
