@@ -525,8 +525,8 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
             for c_per, recorder in zip(c_percents, channel_sparsity_records):
                 recorder.update(c_per.item(), 1)
             # measure accuracy and record loss
-            prec1 = utils.accuracy(output.data, target)[0]
-            top1.update(prec1.item(), input.size(0))
+            # prec1 = utils.accuracy(output.data, target)[0]
+            # top1.update(prec1.item(), input.size(0))
 
             if args.feat_save_dir:
                 viz.save_feat(meta["feat_before"], args.feat_save_dir, img_path[0].split("/")[-1], "before")
@@ -549,12 +549,12 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
                         viz.plot_masks(meta['masks'], save_path=os.path.join(save_path, "mask_sum.jpg"), WIDTH=4)
                     viz.showKey()
 
-    print(f'* Epoch {epoch} - Prec@1 {top1.avg:.3f}')
+    print(f'* Epoch {epoch} - Prec@1 {top1.avg:.3f} - Prec@5 {top5.avg:.3f}')
     print(f'* average FLOPS (multiply-accumulates, MACs) per image:  {model.compute_average_flops_cost()[0]/1e6:.6f} MMac')
     spatial_layer_str = ",".join([str(round(recorder.avg, 4)) for recorder in spatial_sparsity_records])
     channel_layer_str = ",".join([str(round(recorder.avg, 4)) for recorder in channel_sparsity_records])
     print("* Spatial Percentage are: {}".format(spatial_layer_str))
-    print("* Channel Percentage are: {}".format(spatial_layer_str))
+    print("* Channel Percentage are: {}".format(channel_layer_str))
     model.stop_flops_count()
     if file_path:
         with open(file_path, "a+") as f:
