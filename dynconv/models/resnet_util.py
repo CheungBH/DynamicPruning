@@ -87,7 +87,7 @@ class Bottleneck(nn.Module):
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1, base_width=64, dilation=1,
                  norm_layer=None, sparse=False, resolution_mask=False, mask_block=False, mask_type="conv",
                  save_feat=False, input_resolution=False, conv1_act="relu", channel_budget=-1, channel_unit_type="fc",
-                 group_size=1, dropout_ratio=0, dropout_stages=[-1], **kwargs):
+                 group_size=1, dropout_ratio=0, dropout_stages=[-1], budget=-1, **kwargs):
         super(Bottleneck, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
@@ -122,6 +122,7 @@ class Bottleneck(nn.Module):
         self.input_resolution = input_resolution
         self.mask_sampler = nn.MaxPool2d(kernel_size=2)
         self.channel_budget = channel_budget
+        self.spatial_budget = budget
         self.dropout_ratio = dropout_ratio
         self.dropout_stages = dropout_stages
 
@@ -132,7 +133,7 @@ class Bottleneck(nn.Module):
                                                       group_size=group_size, channel_budget=channel_budget, **kwargs)
                 elif channel_unit_type == "fc_gumbel":
                     self.saliency = GumbelChannelUnit(inplanes=inplanes, outplanes=planes, group_size=group_size,
-                                                      budget=self.budget, **kwargs)
+                                                      budget=channel_budget, **kwargs)
                 else:
                     raise NotImplementedError
 
@@ -142,15 +143,17 @@ class Bottleneck(nn.Module):
                 if mask_type == "conv":
                     # in the resnet basic block, the first convolution is already strided, so mask_stride = 1
                     if not input_resolution:
-                        self.masker = dynconv.MaskUnit(channels=inplanes, stride=stride, dilate_stride=1, **kwargs)
+                        self.masker = dynconv.MaskUnit(channels=inplanes, stride=stride, dilate_stride=1,
+                                                       budget=self.spatial_budget, **kwargs)
                     else:
                         self.masker = dynconv.MaskUnit(channels=inplanes, stride=1, dilate_stride=1,
-                                                       input_resolution=True, **kwargs)
+                                                       budget=self.spatial_budget, input_resolution=True, **kwargs)
                 elif mask_type == "stat":
                     raise NotImplementedError
                     self.masker = dynconv.StatMaskUnit(stride=stride, dilate_stride=1)
                 elif mask_type == "stat_mom":
-                    self.masker = dynconv.StatMaskUnitMom(stride=stride, dilate_stride=1, **kwargs)
+                    self.masker = dynconv.StatMaskUnitMom(stride=stride, dilate_stride=1, budget=self.spatial_budget,
+                                                          **kwargs)
                 else:
                     raise NotImplementedError
         else:
