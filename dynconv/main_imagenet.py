@@ -175,12 +175,11 @@ def main():
                 self.tb_writer.add_scalar("{}/channel loss".format(phase), channel_loss, iteration)
                 iteration += 1
 
-            return task_loss, spatial_loss, spatial_percents,channel_loss, channel_percents
+            return task_loss, spatial_loss, spatial_percents, channel_loss, channel_percents
 
         def get_channel_loss(self, meta):
-            channel_loss = torch.zeros(1).cuda()
+            channel_loss, channel_percents = torch.zeros(1).cuda(), []
             if 0 < self.channel_budget < 1:
-                channel_percents = []
                 for vector in meta["channel_prediction"]:
                     layer_percent = torch.true_divide(vector.sum(), vector.numel())
                     channel_percents.append(layer_percent)
@@ -188,7 +187,7 @@ def main():
                     channel_loss += max(0, layer_percent - self.channel_budget) ** 2
             else:
                 channel_loss = meta["lasso_sum"]
-            return channel_loss
+            return channel_loss, channel_percents
 
     tb_folder = os.path.join(args.save_dir, "tb") if not args.evaluate else ""
     channel_gumbel = args.channel_budget if "gumbel" in args.channel_unit_type else -1
