@@ -146,7 +146,7 @@ def main():
 
     ## CRITERION
     class Loss(nn.Module):
-        def __init__(self, budget, net_weight, block_weight, tensorboard_folder="", **kwargs):
+        def __init__(self, budget, net_weight, block_weight, tensorboard_folder="", channel_budget=0, **kwargs):
             super(Loss, self).__init__()
             self.task_loss = nn.CrossEntropyLoss().to(device=device)
             self.sparsity_loss = dynconv.SparsityCriterion(args.budget, **kwargs) \
@@ -157,27 +157,45 @@ def main():
             if tensorboard_folder:
                 os.makedirs(tensorboard_folder, exist_ok=True)
             self.tb_writer = SummaryWriter(tensorboard_folder) if tensorboard_folder else ""
+            self.channel_budget = channel_budget
 
         def forward(self, output, target, meta, phase="train"):
             global iteration
-            task_loss, loss_block, loss_net, layer_percents = self.task_loss(output, target), torch.zeros(1).cuda(), \
+            task_loss, loss_block, loss_net, spatial_percents = self.task_loss(output, target), torch.zeros(1).cuda(), \
                                                               torch.zeros(1).cuda(), []
             if self.sparsity_loss is not None:
-                loss_net, loss_block, layer_percents = self.sparsity_loss(meta)
-            sparse_loss = loss_block * self.block_weight + loss_net * self.net_weight
-
+                loss_net, loss_block, spatial_percents = self.sparsity_loss(meta)
+            spatial_loss = loss_block * self.block_weight + loss_net * self.net_weight
+            channel_loss, channel_percents = self.get_channel_loss(meta)
+            
             if self.tb_writer and phase == "train":
                 self.tb_writer.add_scalar("{}/task loss".format(phase), task_loss, iteration)
                 self.tb_writer.add_scalar("{}/network loss".format(phase), loss_net, iteration)
                 self.tb_writer.add_scalar("{}/block loss".format(phase), loss_block, iteration)
+                self.tb_writer.add_scalar("{}/channel loss".format(phase), channel_loss, iteration)
                 iteration += 1
-            return task_loss, sparse_loss, layer_percents
+
+            return task_loss, spatial_loss, spatial_percents,channel_loss, channel_percents
+
+        def get_channel_loss(self, meta):
+            channel_loss = torch.zeros(1).cuda()
+            if 0 < self.channel_budget < 1:
+                channel_percents = []
+                for vector in meta["channel_vector"]:
+                    layer_percent = torch.true_divide(vector.sum(), vector.numel())
+                    channel_percents.append(layer_percent)
+                    assert layer_percent >= 0 and layer_percent <= 1, layer_percent
+                    channel_loss += max(0, layer_percent - self.channel_budget) ** 2
+            else:
+                channel_loss = meta["lasso_sum"]
+            return channel_loss
 
     tb_folder = os.path.join(args.save_dir, "tb") if not args.evaluate else ""
+    channel_gumbel = args.channel_budget if "gumbel" in args.channel_unit_type else -1
     criterion = Loss(args.budget, net_weight=args.net_weight, block_weight=args.layer_weight, num_epochs=args.epochs,
                      strategy=args.sparse_strategy, valid_range=args.valid_range, static_range=args.static_range,
                      tensorboard_folder=tb_folder, unlimited_lower=args.unlimited_lower,
-                     layer_loss_method=args.layer_loss_method)
+                     layer_loss_method=args.layer_loss_method, channel_budget=channel_gumbel)
 
     if not args.evaluate:
         transform_train = transforms.Compose([
@@ -353,6 +371,18 @@ def main():
         print(f" * Best prec1: {best_prec1}, Epoch {best_epoch}, MMac {best_MMac}", file=f)
 
 
+def layer_count(args):
+    if args.model == "resnet50":
+        layer_cnt = 16
+    elif args.model == "resnet101":
+        layer_cnt = 36
+    elif args.model == "MobileNetV2":
+        layer_cnt = 17
+    else:
+        layer_cnt = 20
+    return layer_cnt
+
+
 def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     """
     Run one train epoch
@@ -360,20 +390,17 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     model.train()
     top1 = utils.AverageMeter()
     task_loss_record = utils.AverageMeter()
-    sparse_loss_record = utils.AverageMeter()
-    layer_sparsity_records = [utils.AverageMeter() for _ in range(16)]
+    spatial_loss_record = utils.AverageMeter()
+    channel_loss_record = utils.AverageMeter()
+    layer_cnt = layer_count(args)
+
+    spatial_sparsity_records = [utils.AverageMeter() for _ in range(layer_cnt)]
+    channel_sparsity_records = [utils.AverageMeter() for _ in range(layer_cnt)]
 
     if args.scheduler == "cosine_anneal_warmup":
         adjust_learning_rate(optimizer=optimizer, current_epoch=epoch, max_epoch=args.epochs, lr_min=0.00001,
                              lr_max=0.01, warmup=True)
-    # if float(args.lr_decay[0]) > 1:
-    #     if epoch < args.lr_decay[0]:
-    #         gumbel_temp = 5.0
-    #     elif epoch < args.lr_decay[1]:
-    #         gumbel_temp = 2.5
-    #     else:
-    #         gumbel_temp = 1
-    # else:
+
     if epoch < 0.5*args.epochs:
         gumbel_temp = 5.0
     elif epoch < 0.8*args.epochs:
@@ -392,20 +419,22 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
         meta = {'masks': [], 'device': device, 'gumbel_temp': gumbel_temp, 'gumbel_noise': gumbel_noise, 'epoch': epoch,
                 "lasso_sum": 0, "channel_prediction": {}}
         output, meta = model(input, meta)
-        t_loss, s_loss, layer_percents = criterion(output, target, meta)
+        t_loss, s_loss, s_percents, c_loss, c_percents = criterion(output, target, meta)
         prec1 = utils.accuracy(output.data, target)[0]
         top1.update(prec1.item(), input.size(0))
         task_loss_record.update(t_loss.item(), input.size(0))
-        sparse_loss_record.update(s_loss.item(), input.size(0))
+        spatial_loss_record.update(s_loss.item(), input.size(0))
+        channel_loss_record.update(c_loss.item(), input.size(0))
 
-        for layer_per, recorder in zip(layer_percents, layer_sparsity_records):
-            recorder.update(layer_per.item(), 1)
+        for s_per, recorder in zip(s_percents, spatial_sparsity_records):
+            recorder.update(s_per.item(), 1)
+        for c_per, recorder in zip(c_percents, channel_sparsity_records):
+            recorder.update(c_per.item(), 1)
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
-        loss = s_loss + t_loss if s_loss else t_loss
-        if 0 < args.channel_budget < 1:
-            loss += args.lasso_lambda * meta["lasso_sum"]
+        loss = s_loss + t_loss + args.lasso_lambda * c_loss if s_loss else t_loss
+
         if mix_precision:
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
@@ -414,20 +443,28 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
 
         optimizer.step()
 
-    layer_str = ",".join([str(round(recorder.avg, 4)) for recorder in layer_sparsity_records])
+    spatial_layer_str = ",".join([str(round(recorder.avg, 4)) for recorder in spatial_sparsity_records])
+    channel_layer_str = ",".join([str(round(recorder.avg, 4)) for recorder in channel_sparsity_records])
+    # print("* Spatial Percentage are: {}".format(spatial_layer_str))
+    # print("* Channel Percentage are: {}".format(spatial_layer_str))
     if file_path:
         with open(file_path, "a+") as f:
             logger.tick(f)
             f.write("Train: Epoch {}, Prec@1 {}, task loss {}, sparse loss {}\n".format
-                    (epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(sparse_loss_record.avg, 4)))
-            f.write("Train Layer Percentage: {}\n".format(layer_str))
+                    (epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(spatial_loss_record.avg, 4)))
+            f.write("Train Spatial Percentage: {}\n".format(spatial_layer_str))
+            f.write("Train Channel Percentage: {}\n".format(channel_layer_str))
 
     if criterion.tb_writer:
         criterion.tb_writer.add_scalar("train/TASK LOSS-EPOCH", task_loss_record.avg, epoch)
         criterion.tb_writer.add_scalar("train/Prec@1-EPOCH", top1.avg, epoch)
-        criterion.tb_writer.add_scalar('train/SPARSE LOSS-EPOCH', sparse_loss_record.avg, epoch)
-        for idx, recorder in enumerate(layer_sparsity_records):
-            criterion.tb_writer.add_scalar("train/LAYER {}-EPOCH".format(idx+1), recorder.avg, epoch)
+        criterion.tb_writer.add_scalar('train/SPATIAL LOSS-EPOCH', spatial_loss_record.avg, epoch)
+        criterion.tb_writer.add_scalar('train/CHANNEL LOSS-EPOCH', channel_loss_record.avg, epoch)
+        # criterion.tb_writer.add_scalar("train/MMac-EPOCH", model.compute_average_flops_cost()[0]/1e6, epoch)
+        for idx, recorder in enumerate(spatial_sparsity_records):
+            criterion.tb_writer.add_scalar("train/SPATIAL LAYER {}-EPOCH".format(idx+1), recorder.avg, epoch)
+        for idx, recorder in enumerate(channel_sparsity_records):
+            criterion.tb_writer.add_scalar("train/CHANNEL LAYER {}-EPOCH".format(idx+1), recorder.avg, epoch)
 
 
 def validate(args, val_loader, model, criterion, epoch, file_path=None):
@@ -436,8 +473,12 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
     """
     top1 = utils.AverageMeter()
     task_loss_record = utils.AverageMeter()
-    sparse_loss_record = utils.AverageMeter()
-    layer_sparsity_records = [utils.AverageMeter() for _ in range(16)]
+    spatial_loss_record = utils.AverageMeter()
+    channel_loss_record = utils.AverageMeter()
+    layer_cnt = layer_count(args)
+
+    spatial_sparsity_records = [utils.AverageMeter() for _ in range(layer_cnt)]
+    channel_sparsity_records = [utils.AverageMeter() for _ in range(layer_cnt)]
 
     channel_files = []
     target_stages = [(3, 1), (3, 2)]
@@ -467,12 +508,17 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
             output, meta = model(input, meta)
             record_channels(img_path, meta['channel_prediction'], channel_files)
             output = output.float()
-            t_loss, s_loss, layer_percents = criterion(output, target, meta, phase="")
+            t_loss, s_loss, s_percents, c_loss, c_percents = criterion(output, target, meta)
+            prec1 = utils.accuracy(output.data, target)[0]
+            top1.update(prec1.item(), input.size(0))
             task_loss_record.update(t_loss.item(), input.size(0))
-            sparse_loss_record.update(s_loss.item(), input.size(0))
-            for layer_per, recorder in zip(layer_percents, layer_sparsity_records):
-                recorder.update(layer_per.item(), 1)
+            spatial_loss_record.update(s_loss.item(), input.size(0))
+            channel_loss_record.update(c_loss.item(), input.size(0))
 
+            for s_per, recorder in zip(s_percents, spatial_sparsity_records):
+                recorder.update(s_per.item(), 1)
+            for c_per, recorder in zip(c_percents, channel_sparsity_records):
+                recorder.update(c_per.item(), 1)
             # measure accuracy and record loss
             prec1 = utils.accuracy(output.data, target)[0]
             top1.update(prec1.item(), input.size(0))
@@ -500,22 +546,30 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
 
     print(f'* Epoch {epoch} - Prec@1 {top1.avg:.3f}')
     print(f'* average FLOPS (multiply-accumulates, MACs) per image:  {model.compute_average_flops_cost()[0]/1e6:.6f} MMac')
-    layer_str = ",".join([str(round(recorder.avg, 4)) for recorder in layer_sparsity_records])
-    print("* Layer Percentage are: {}".format(layer_str))
+    spatial_layer_str = ",".join([str(round(recorder.avg, 4)) for recorder in spatial_sparsity_records])
+    channel_layer_str = ",".join([str(round(recorder.avg, 4)) for recorder in channel_sparsity_records])
+    print("* Spatial Percentage are: {}".format(spatial_layer_str))
+    print("* Channel Percentage are: {}".format(spatial_layer_str))
     model.stop_flops_count()
     if file_path:
         with open(file_path, "a+") as f:
             f.write("Validation: Epoch {}, Prec@1 {}, task loss {}, sparse loss {}, ave FLOPS per image: {} MMac\n".
-                    format(epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(sparse_loss_record.avg, 4),
+                    format(epoch, round(top1.avg, 4), round(task_loss_record.avg, 4), round(spatial_loss_record.avg, 4),
                            round(model.compute_average_flops_cost()[0]/1e6), 6))
-            f.write("Validation Layer percentage: {}\n".format(layer_str))
+            f.write("Validation Spatial percentage: {}\n".format(spatial_layer_str))
+            f.write("Validation Channel percentage: {}\n".format(channel_layer_str))
+
     if criterion.tb_writer:
         criterion.tb_writer.add_scalar("valid/TASK LOSS-EPOCH", task_loss_record.avg, epoch)
         criterion.tb_writer.add_scalar("valid/Prec@1-EPOCH", top1.avg, epoch)
-        criterion.tb_writer.add_scalar('valid/SPARSE LOSS-EPOCH', sparse_loss_record.avg, epoch)
+        criterion.tb_writer.add_scalar('valid/SPATIAL LOSS-EPOCH', spatial_loss_record.avg, epoch)
+        criterion.tb_writer.add_scalar('valid/CHANNEL LOSS-EPOCH', channel_loss_record.avg, epoch)
         criterion.tb_writer.add_scalar("valid/MMac-EPOCH", model.compute_average_flops_cost()[0]/1e6, epoch)
-        for idx, recorder in enumerate(layer_sparsity_records):
-            criterion.tb_writer.add_scalar("valid/LAYER {}-EPOCH".format(idx+1), recorder.avg, epoch)
+        for idx, recorder in enumerate(spatial_sparsity_records):
+            criterion.tb_writer.add_scalar("valid/SPATIAL LAYER {}-EPOCH".format(idx+1), recorder.avg, epoch)
+        for idx, recorder in enumerate(channel_sparsity_records):
+            criterion.tb_writer.add_scalar("valid/CHANNEL LAYER {}-EPOCH".format(idx+1), recorder.avg, epoch)
+
     return top1.avg, model.compute_average_flops_cost()[0]/1e6
 
 

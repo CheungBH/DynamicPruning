@@ -8,7 +8,7 @@ except ImportError:
 import dynconv
 from dynconv.maskunit import StatMaskUnit
 import models.resnet_util
-from models.channel_saliency import conv_forward, bn_relu_foward, channel_process, ChannelVectorUnit
+from models.channel_saliency import conv_forward, bn_relu_foward, channel_process, ChannelVectorUnit, GumbelChannelUnit
 
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
@@ -130,6 +130,9 @@ class Bottleneck(nn.Module):
                 if channel_unit_type == "fc":
                     self.saliency = ChannelVectorUnit(in_channels=inplanes, out_channels=planes,
                                                       group_size=group_size, channel_budget=channel_budget, **kwargs)
+                elif channel_unit_type == "fc_gumbel":
+                    self.saliency = GumbelChannelUnit(inplanes=inplanes, outplanes=planes, group_size=group_size,
+                                                      budget=self.budget, **kwargs)
                 else:
                     raise NotImplementedError
 
@@ -151,7 +154,7 @@ class Bottleneck(nn.Module):
                 else:
                     raise NotImplementedError
         else:
-            if mask_type == "none":
+            if mask_type == "none" or mask_type == "conv":
                 self.mask = NoneMask()
             elif mask_type == "zero_ratio":
                 self.mask = ZeroRatioMask(**kwargs)
@@ -197,13 +200,6 @@ class Bottleneck(nn.Module):
             m = self.masker(x, meta)
         return m
 
-    # def obtain_vector(self, x, meta):
-    #     if self.resolution_mask:
-    #         raise NotImplementedError
-    #     else:
-    #         vector = self.saliency(x, meta)
-    #     return vector
-
     def add_dropout(self, x, meta):
         if meta["stage_id"] in self.dropout_stages and 0 < self.dropout_ratio < 1:
             # test = (torch.rand_like(x) > self.dropout_ratio).int()
@@ -242,19 +238,20 @@ class Bottleneck(nn.Module):
 
             if self.channel_budget > 0:
                 vector = self.saliency(x, meta)
+                conv_forward(self.conv1, None, None, vector, forward=False)
+                conv_forward(self.conv2, None, vector, vector, forward=False)
+                conv_forward(self.conv3, None, vector, None, forward=False)
 
             x = dynconv.conv1x1(self.conv1, x, mask_dilate)
             x = dynconv.bn_relu(self.bn1, self.conv1_act, x, mask_dilate)
             x = dynconv.apply_mask(x, mask_dilate) if self.input_resolution else x
             if self.channel_budget > 0:
                 x = channel_process(x, vector)
-                conv_forward(self.conv1, None, None, vector, forward=False)
             x = dynconv.conv3x3(self.conv2, x, mask_dilate, mask)
             x = dynconv.bn_relu(self.bn2, self.relu, x, mask)
             if self.channel_budget > 0:
                 x = channel_process(x, vector)
-                conv_forward(self.conv2, None, vector, vector, forward=False)
-                conv_forward(self.conv3, None, vector, None, forward=False)
+
             x = dynconv.conv1x1(self.conv3, x, mask)
             x = dynconv.bn_relu(self.bn3, None, x, mask)
             meta["saliency_mask"] = self.get_saliency_mask(x, mask.hard)

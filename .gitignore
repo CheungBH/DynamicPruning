@@ -13,4 +13,5 @@ dynconv/random_mask/
 dynconv/random_mask_sample/
 dynconv/sample/
 FBS/exp
-
+*tb*
+*tmp*
