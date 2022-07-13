@@ -19,6 +19,10 @@ class SimpleArguments:
             args.mask_type = "conv"
             args.mask_kernel = 1
             args.no_attention = True
+        elif idx == "default_mask":
+            args.mask_type = "conv"
+            args.mask_kernel = 1
+            args.no_attention = True
         elif not idx:
             pass
         else:
