@@ -2,8 +2,8 @@
 
 class SimpleArguments:
     def __init__(self):
-        self.data_root = "/media/hkuit155/NewDisk/imagenet"
-        self.pretrain_weight = "weights/resnet50-19c8e357.pth"
+        self.data_root = ""
+        self.pretrain_weight = ""
         self.load_weight = ""
 
     def update_model_args(self, idx, args):
