@@ -6,7 +6,7 @@
 blockdrop/cv/
 data
 *train_log.log
-dynconv/exp
+dynconv/exp*
 dynconv/plot
 *feature_analysis*
 dynconv/random_mask/
@@ -15,3 +15,6 @@ dynconv/sample/
 FBS/exp
 *tb*
 *tmp*
+*result*
+
+

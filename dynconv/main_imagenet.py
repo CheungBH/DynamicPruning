@@ -371,17 +371,6 @@ def main():
         print(f" * Best prec1: {best_prec1}, Epoch {best_epoch}, MMac {best_MMac}", file=f)
 
 
-def layer_count(args):
-    if args.model == "resnet50":
-        layer_cnt = 16
-    elif args.model == "resnet101":
-        layer_cnt = 36
-    elif args.model == "MobileNetV2":
-        layer_cnt = 17
-    else:
-        layer_cnt = 20
-    return layer_cnt
-
 
 def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     """
@@ -393,7 +382,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     task_loss_record = utils.AverageMeter()
     spatial_loss_record = utils.AverageMeter()
     channel_loss_record = utils.AverageMeter()
-    layer_cnt = layer_count(args)
+    layer_cnt = utils.layer_count(args)
 
     spatial_sparsity_records = [utils.AverageMeter() for _ in range(layer_cnt)]
     channel_sparsity_records = [utils.AverageMeter() for _ in range(layer_cnt)]
@@ -479,7 +468,7 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
     task_loss_record = utils.AverageMeter()
     spatial_loss_record = utils.AverageMeter()
     channel_loss_record = utils.AverageMeter()
-    layer_cnt = layer_count(args)
+    layer_cnt = utils.layer_count(args)
 
     spatial_sparsity_records = [utils.AverageMeter() for _ in range(layer_cnt)]
     channel_sparsity_records = [utils.AverageMeter() for _ in range(layer_cnt)]

@@ -4,6 +4,22 @@ import torch
 from torchvision import transforms
 
 
+def layer_count(args):
+    if args.model == "resnet50":
+        layer_cnt = 16
+    elif args.model == "resnet101":
+        layer_cnt = 36
+    elif args.model == "MobileNetV2":
+        layer_cnt = 17
+    elif args.model == "resnet32":
+        layer_cnt = 15
+    elif args.model == "MobileNetV2_32x32":
+        layer_cnt = 12
+    else:
+        layer_cnt = 20
+    return layer_cnt
+
+
 class AverageMeter(object):
     """Computes and stores the average and current value"""
     def __init__(self):
