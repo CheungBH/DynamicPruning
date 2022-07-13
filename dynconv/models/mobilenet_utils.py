@@ -52,13 +52,13 @@ class InvertedResidualBlock(nn.Module):
     def __init__(self, inp, oup, stride, expand_ratio, norm_layer=None, sparse=False, resolution_mask=False,
                  mask_block=False, mask_type="conv", final_activation="linear", downsample=False,
                  input_resolution=False, dropout_ratio=0, dropout_stages=[-1], channel_budget=-1,
-                 channel_unit_type="fc",
-                 group_size=1, **kwargs):
+                 channel_unit_type="fc", budget=-1, group_size=1, **kwargs):
         super(InvertedResidualBlock, self).__init__()
         self.stride = stride
         assert stride in [1, 2]
         self.sparse = sparse
         self.channel_budget = channel_budget
+        self.spatial_budget = budget
         self.use_res_connect = (self.stride == 1 and inp == oup) if downsample is None else True
         self.downsample = downsample
 
@@ -82,19 +82,20 @@ class InvertedResidualBlock(nn.Module):
         if self.sparse and self.use_res_connect:
             if self.resolution_mask:
                 if self.mask_block:
-                    self.masker = dynconv.MaskUnit(channels=inp, stride=stride, dilate_stride=1)
+                    self.masker = dynconv.MaskUnit(channels=inp, stride=stride, budget=budget, dilate_stride=1)
             else:
                 if mask_type == "conv":
                     if not input_resolution:
-                        self.masker = dynconv.MaskUnit(channels=inp, stride=stride, dilate_stride=1, **kwargs)
+                        self.masker = dynconv.MaskUnit(channels=inp, stride=stride, budget=budget, dilate_stride=1,
+                                                       **kwargs)
                     else:
-                        self.masker = dynconv.MaskUnit(channels=inp, stride=1, dilate_stride=1,
+                        self.masker = dynconv.MaskUnit(channels=inp, stride=1, budget=budget, dilate_stride=1,
                                                        input_resolution=True, **kwargs)
                 elif mask_type == "stat":
                     raise NotImplementedError
                     self.masker = dynconv.StatMaskUnit(stride=stride, dilate_stride=1)
                 elif mask_type == "stat_mom":
-                    self.masker = dynconv.StatMaskUnitMom(stride=stride, dilate_stride=1, **kwargs)
+                    self.masker = dynconv.StatMaskUnitMom(stride=stride, budget=budget, dilate_stride=1, **kwargs)
 
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
@@ -121,12 +122,6 @@ class InvertedResidualBlock(nn.Module):
         x = self.bn2(self.conv_pw_2(x))
         return x
 
-    # def add_dropout(self, x, meta):
-    #     if meta["stage_id"] in self.dropout_stages and 0 < self.dropout_ratio < 1:
-    #         return (torch.rand_like(x) > self.dropout_ratio).int() * x
-    #     else:
-    #         return x
-
     def obtain_mask(self, x, meta):
         if self.resolution_mask:
             if self.mask_block:
@@ -142,7 +137,7 @@ class InvertedResidualBlock(nn.Module):
 
     def forward_channel_pruning(self, x, meta):
 
-        vector = self.saliency(x, meta)
+        vector, meta = self.saliency(x, meta)
 
         conv_forward(self.conv_pw_1, None, None, vector, forward=False)
         conv_forward(self.conv3x3_dw, None, None, vector, forward=False)
@@ -169,7 +164,7 @@ class InvertedResidualBlock(nn.Module):
             m = self.obtain_mask(x, meta)
             mask_dilate, mask = m['dilate'], m['std']
             if self.channel_budget > 0:
-                vector = self.saliency(x, meta)
+                vector, meta = self.saliency(x, meta)
                 conv_forward(self.conv_pw_1, None, None, vector, forward=False)
                 conv_forward(self.conv3x3_dw, None, None, vector, forward=False)
                 conv_forward(self.conv_pw_2, None, vector, None, forward=False)

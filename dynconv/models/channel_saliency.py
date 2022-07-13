@@ -75,7 +75,7 @@ class GumbelChannelUnit(nn.Module):
         c_in = self.channel_saliency_predictor(context)  # [N, C_out, 1, 1]
         # channel gate
         mask_c = self.gumbel(c_in)  # [N, C_out, 1, 1]
-        meta["channel_prediction"][(meta["stage_id"], meta["block_id"])] = x
+        meta["channel_prediction"][(meta["stage_id"], meta["block_id"])] = mask_c
         mask_c = expand(mask_c, self.group_size)
         return mask_c, meta
 
