@@ -2,8 +2,8 @@
 
 class SimpleArguments:
     def __init__(self):
-        self.data_root = ""
-        self.pretrain_weight = ""
+        self.data_root = "/media/hkuit155/NewDisk/imagenet"
+        self.pretrain_weight = "weights/resnet50-19c8e357.pth"
         self.load_weight = ""
 
     def update_model_args(self, idx, args):
@@ -51,10 +51,10 @@ class SimpleArguments:
         if self.data_root:
             args.dataset_root = self.data_root
 
-        if not args.evaluate:
-            if args.load == "pretrain":
-                args.load = self.pretrain_weight
-            elif self.load_weight and args.load == "default":
-                print("Replacing weight checkpoint: {} -> {}".format(args.load, self.load_weight))
-                args.load = self.load_weight
+        # if not args.evaluate:
+        if args.load == "pretrain":
+            args.load = self.pretrain_weight
+        elif self.load_weight and args.load == "default":
+            print("Replacing weight checkpoint: {} -> {}".format(args.load, self.load_weight))
+            args.load = self.load_weight
         return args
