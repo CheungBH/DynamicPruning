@@ -341,7 +341,6 @@ def main():
         print(f"########## Epoch {epoch} ##########")
 
         # train for one epoch
-        print('current lr {:.5e}'.format(optimizer.param_groups[0]['lr']))
         train(args, train_loader, model, criterion, optimizer, epoch, file_path)
         if args.scheduler != "cosine_anneal_warmup":
             lr_scheduler.step()
@@ -402,6 +401,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     if args.scheduler == "cosine_anneal_warmup":
         adjust_learning_rate(optimizer=optimizer, current_epoch=epoch, max_epoch=args.epochs, lr_min=0.00001,
                              lr_max=0.01, warmup=True)
+    print('current lr {:.5e}'.format(optimizer.param_groups[0]['lr']))
 
     if epoch < 0.5*args.epochs:
         gumbel_temp = 5.0
