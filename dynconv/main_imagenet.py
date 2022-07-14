@@ -377,7 +377,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
 
     if args.scheduler == "cosine_anneal_warmup":
         utils.adjust_learning_rate(optimizer=optimizer, current_epoch=epoch, max_epoch=args.epochs, lr_min=0.00001,
-                             lr_max=0.01)
+                             lr_max=args.lr)
     print('current lr {:.5e}'.format(optimizer.param_groups[0]['lr']))
 
     if epoch < 0.5 * args.epochs:
