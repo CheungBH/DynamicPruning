@@ -31,7 +31,7 @@ class SimpleArguments:
 
     def update_loss_args(self, idx, args):
         if idx == "layer_wise":
-            args.net_weight = 0
+            args.net_loss_weight = 0
             args.valid_range = 1
         elif idx == "flops":
             args.valid_range = 0.33

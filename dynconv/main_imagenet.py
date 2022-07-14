@@ -52,8 +52,8 @@ def main():
     parser.add_argument('--scheduler', type=str, default='step', help='network model name')
 
     # loss
-    parser.add_argument('--net_weight', default=10, type=float, help='weight of network sparsity')
-    parser.add_argument('--layer_weight', default=10, type=float, help='weight of layer sparsity')
+    parser.add_argument('--net_loss_weight', default=10, type=float, help='weight of network sparsity')
+    parser.add_argument('--spatial_loss_weight', default=10, type=float, help='weight of layer sparsity')
     parser.add_argument('--sparse_strategy', type=str, default='static', help='Type of mask')
     parser.add_argument('--valid_range', type=float, default=0.33, help='Type of mask')
     parser.add_argument('--static_range', type=float, default=0, help='Type of mask')
@@ -66,7 +66,7 @@ def main():
     parser.add_argument('--channel_budget', default=-1, type=float, help='computational budget (between 0 and 1) (-1 for no sparsity)')
     parser.add_argument('--channel_unit_type', type=str, default='fc', help='Type of mask')
     parser.add_argument('--channel_stage', nargs="+", type=int, help='target stage for pretrain mask')
-    parser.add_argument('--lasso_lambda', type=float, default=1e-8)
+    parser.add_argument('--channel_loss_weight', type=float, default=1e-8)
 
     # model
     parser.add_argument('--model', type=str, default='resnet101', help='network model name')
@@ -135,14 +135,14 @@ def main():
 
     ## CRITERION
     class Loss(nn.Module):
-        def __init__(self, budget, net_weight, block_weight, tensorboard_folder="", channel_budget=0, **kwargs):
+        def __init__(self, budget, net_weight, spatial_weight, tensorboard_folder="", channel_budget=0, **kwargs):
             super(Loss, self).__init__()
             self.task_loss = nn.CrossEntropyLoss().to(device=device)
             self.sparsity_loss = dynconv.SparsityCriterion(args.budget, **kwargs) \
                 if args.budget >= 0 and "stat" not in args.mask_type else None
-            self.budget = budget
+            self.spatial_budget = budget
             self.net_weight = net_weight
-            self.block_weight = block_weight
+            self.spatial_weight = spatial_weight
             if tensorboard_folder:
                 os.makedirs(tensorboard_folder, exist_ok=True)
             self.tb_writer = SummaryWriter(tensorboard_folder) if tensorboard_folder else ""
@@ -154,7 +154,7 @@ def main():
                                                               torch.zeros(1).cuda(), []
             if self.sparsity_loss is not None:
                 loss_net, loss_block, spatial_percents = self.sparsity_loss(meta)
-            spatial_loss = loss_block * self.block_weight + loss_net * self.net_weight
+            spatial_loss = loss_block * self.spatial_weight + loss_net * self.net_weight
             channel_loss, channel_percents = self.get_channel_loss(meta)
             
             if self.tb_writer and phase == "train":
@@ -180,7 +180,7 @@ def main():
 
     tb_folder = os.path.join(args.save_dir, "tb") if not args.evaluate else ""
     channel_gumbel = args.channel_budget if "gumbel" in args.channel_unit_type else -1
-    criterion = Loss(args.budget, net_weight=args.net_weight, block_weight=args.layer_weight, num_epochs=args.epochs,
+    criterion = Loss(args.budget, net_weight=args.net_loss_weight, spatial_weight=args.spatial_loss_weight, num_epochs=args.epochs,
                      strategy=args.sparse_strategy, valid_range=args.valid_range, static_range=args.static_range,
                      tensorboard_folder=tb_folder, unlimited_lower=args.unlimited_lower,
                      layer_loss_method=args.layer_loss_method, channel_budget=channel_gumbel)
@@ -414,7 +414,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
-        loss = s_loss + t_loss + args.lasso_lambda * c_loss #if s_loss else t_loss
+        loss = s_loss + t_loss + args.channel_loss_weight * c_loss #if s_loss else t_loss
 
         if mix_precision:
             with amp.scale_loss(loss, optimizer) as scaled_loss:
