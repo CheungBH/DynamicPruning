@@ -71,15 +71,6 @@ class SparsityCriterion(nn.Module):
             m_dil, m = mask['dilate'], mask['std']
             mask_percents.append(m.hard.sum()/m.hard.numel())
 
-            # c = m_dil.active_positions * m_dil.flops_per_position + \
-            #     m.active_positions * m.flops_per_position
-            # t = m_dil.total_positions * m_dil.flops_per_position + \
-            #     m.total_positions * m.flops_per_position
-            #
-            # try:
-            #     layer_perc = c / t
-            # except RuntimeError:
-            #     layer_perc = torch.true_divide(c, t)
             layer_perc, c, t = self.calculate_layer_ratio(m_dil, m)
 
             layer_percents.append(layer_perc)
