@@ -129,6 +129,7 @@ def main():
 
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0,
             "feat_before": [], "feat_after": [], "lasso_sum": torch.zeros(1).cuda(), "channel_prediction": {}}
+    model.eval()
     _ = model(torch.rand((2, 3, res, res)).cuda(), meta)
 
 
@@ -413,7 +414,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
-        loss = s_loss + t_loss + args.lasso_lambda * c_loss if s_loss else t_loss
+        loss = s_loss + t_loss + args.lasso_lambda * c_loss #if s_loss else t_loss
 
         if mix_precision:
             with amp.scale_loss(loss, optimizer) as scaled_loss:

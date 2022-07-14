@@ -377,7 +377,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
-        loss = s_loss + t_loss + args.lasso_lambda * c_loss if s_loss else t_loss
+        loss = s_loss + t_loss + args.lasso_lambda * c_loss #if s_loss else t_loss
         # if 0 < args.channel_budget < 1:
         #     loss += args.lasso_lambda * meta["lasso_sum"]
         if mix_precision:
