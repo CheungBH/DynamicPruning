@@ -196,11 +196,13 @@ def main():
             else:
                 channel_loss = meta["lasso_sum"]
             return channel_loss, channel_percents
+
     tb_folder = os.path.join(args.save_dir, "tb") if not args.evaluate else ""
+    channel_gumbel = args.channel_budget if "gumbel" in args.channel_unit_type else -1
     criterion = Loss(args.budget, net_weight=args.net_weight, block_weight=args.layer_weight, num_epochs=args.epochs,
                      strategy=args.sparse_strategy, valid_range=args.valid_range, static_range=args.static_range,
                      tensorboard_folder=tb_folder, unlimited_lower=args.unlimited_lower,
-                     layer_loss_method=args.layer_loss_method)
+                     layer_loss_method=args.layer_loss_method, channel_budget=channel_gumbel)
 
     ## OPTIMIZER
     optimizer = torch.optim.SGD(model.parameters(), args.lr,
@@ -340,7 +342,7 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
 
     if args.scheduler == "cosine_anneal_warmup":
         utils.adjust_learning_rate(optimizer=optimizer, current_epoch=epoch, max_epoch=args.epochs, lr_min=0.00001,
-                             lr_max=0.1, warmup_epoch=10)
+                             lr_max=args.lr, warmup_epoch=10)
 
     if epoch < 0.5 * args.epochs:
         gumbel_temp = 2.5
@@ -376,8 +378,8 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
         # compute gradient and do SGD step
         optimizer.zero_grad()
         loss = s_loss + t_loss + args.lasso_lambda * c_loss if s_loss else t_loss
-        if 0 < args.channel_budget < 1:
-            loss += args.lasso_lambda * meta["lasso_sum"]
+        # if 0 < args.channel_budget < 1:
+        #     loss += args.lasso_lambda * meta["lasso_sum"]
         if mix_precision:
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
