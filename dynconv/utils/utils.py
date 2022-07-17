@@ -10,8 +10,8 @@ def set_gumbel(temps, intervals, epoch_ratio, remove_gumbel):
     len_gumbel = len(intervals)
     gumbel_temp = temps[-1]
     for idx in range(len(intervals)):
-        if intervals[len_gumbel-idx] < epoch_ratio:
-            gumbel_temp = temps[len_gumbel-idx]
+        if intervals[len_gumbel-idx-1] < epoch_ratio:
+            gumbel_temp = temps[len_gumbel-idx-1]
         else:
             break
     gumbel_noise = False if epoch_ratio > remove_gumbel else True
