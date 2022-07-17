@@ -89,6 +89,10 @@ def main():
     # mobilenet args
     parser.add_argument('--final_activation', default="linear", type=str, help='The numerical threshold of mask')
     parser.add_argument('--use_downsample', action='store_true', help='run without attention')
+    #gumbel args
+    parser.add_argument('--remove_gumbel', default=0.8, type=float, help='The numerical threshold of mask')
+    parser.add_argument('--gumbel_interval', nargs="+", type=float, default=[0.5, 0.8, 1], help='gumbel interval')
+    parser.add_argument('--gumbel_temp', nargs="+", type=float, default=[2.5, 1, 0.6667], help='gumbel value')
 
     # file management
     parser.add_argument('-s', '--save_dir', type=str, default='', help='directory to save model')
@@ -381,13 +385,8 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
                              lr_max=args.lr)
     print('current lr {:.5e}'.format(optimizer.param_groups[0]['lr']))
 
-    if epoch < 0.5 * args.epochs:
-        gumbel_temp = 2.5
-    elif epoch < 0.8 * args.epochs:
-        gumbel_temp = 1
-    else:
-        gumbel_temp = 0.6667
-    gumbel_noise = False if epoch > 0.8*args.epochs else True
+    gumbel_temp, gumbel_noise = utils.set_gumbel(args.gumbel_interval, args.gumbel_temp, epoch/args.epochs,
+                                                 args.remove_gumbel)
 
     num_step =  len(train_loader)
     for input, target, _ in tqdm.tqdm(train_loader, total=num_step, ascii=True, mininterval=5):

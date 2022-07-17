@@ -5,6 +5,19 @@ from torchvision import transforms
 from math import cos, pi
 
 
+def set_gumbel(temps, intervals, epoch_ratio, remove_gumbel):
+    assert len(intervals) == len(temps), "Please reset your gumbel"
+    len_gumbel = len(intervals)
+    gumbel_temp = temps[-1]
+    for idx in range(len(intervals)):
+        if intervals[len_gumbel-idx] < epoch_ratio:
+            gumbel_temp = temps[len_gumbel-idx]
+        else:
+            break
+    gumbel_noise = False if epoch_ratio > remove_gumbel else True
+    return gumbel_temp, gumbel_noise
+
+
 def adjust_learning_rate(optimizer, current_epoch, max_epoch, lr_min=0.0, lr_max=0.1, warmup_epoch=5):
     if current_epoch < warmup_epoch:
         lr = (lr_max-lr_min) * (current_epoch+1) / warmup_epoch
