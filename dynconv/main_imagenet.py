@@ -430,6 +430,8 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
     if file_path:
         with open(file_path, "a+") as f:
             logger.tick(f)
+            f.write("Train: LR {}, gumbel temp {}, gumbel noise {}\n".format(
+                round(optimizer.param_groups[0]["lr"], 4), gumbel_temp, gumbel_noise))
             f.write("Train: Epoch {}, Prec@1 {}, Prec@5 {}, task loss {}, sparse loss {}\n".format
                     (epoch, round(top1.avg, 4), round(top5.avg, 4), round(task_loss_record.avg, 4),
                      round(spatial_loss_record.avg, 4)))
