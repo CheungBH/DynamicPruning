@@ -90,6 +90,7 @@ def main():
 
     # file management
     parser.add_argument('-s', '--save_dir', type=str, default='', help='directory to save model')
+    parser.add_argument('-gf', '--global_file', type=str, default='', help='file to save general information')
     parser.add_argument('-r', '--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
     parser.add_argument('--load', type=str, default='', help='load model path')
