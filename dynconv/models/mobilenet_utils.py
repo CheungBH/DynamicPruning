@@ -116,11 +116,12 @@ class InvertedResidualBlock(nn.Module):
         self.dropout_ratio = dropout_ratio
         self.dropout_stages = dropout_stages
 
-    def forward_basic(self, x):
+    def forward_basic(self, x, meta):
         x = self.activation(self.bn1(self.conv_pw_1(x)))
         x = self.activation(self.bn_dw(self.conv3x3_dw(x)))
         x = self.bn2(self.conv_pw_2(x))
-        return x
+        meta["saliency_mask"] = x
+        return x, meta
 
     def obtain_mask(self, x, meta):
         if self.resolution_mask:
@@ -148,26 +149,26 @@ class InvertedResidualBlock(nn.Module):
         x = self.activation(self.bn_dw(self.conv3x3_dw(x)))
         x = channel_process(x, vector)
         x = self.bn2(self.conv_pw_2(x))
-        meta["saliency_mask"] = None
-
-        return x
+        meta["saliency_mask"] = x
+        meta["masks"].append({"std": None, "dilate": None})
+        return x, meta
 
     def forward_block(self, inp):
         x, meta = inp
         if (not self.sparse) or (not self.use_res_connect):
             if self.channel_budget == -1:
-                x = self.forward_basic(x)
+                x, meta = self.forward_basic(x, meta)
             else:
-                x = self.forward_channel_pruning(x, meta)
+                x, meta = self.forward_channel_pruning(x, meta)
         else:
             meta["stride"] = self.stride
-            m = self.obtain_mask(x, meta)
-            mask_dilate, mask = m['dilate'], m['std']
             if self.channel_budget > 0:
                 vector, meta = self.saliency(x, meta)
                 conv_forward(self.conv_pw_1, None, None, vector, forward=False)
                 conv_forward(self.conv3x3_dw, None, None, vector, forward=False)
                 conv_forward(self.conv_pw_2, None, vector, None, forward=False)
+            m = self.obtain_mask(x, meta)
+            mask_dilate, mask = m['dilate'], m['std']
 
             x = dynconv.conv1x1(self.conv_pw_1, x, mask, mask_dilate)
             x = dynconv.bn_relu(self.bn1, self.activation, x, mask_dilate)
@@ -180,7 +181,8 @@ class InvertedResidualBlock(nn.Module):
                 x = channel_process(x, vector)
             x = dynconv.conv1x1(self.conv_pw_2, x, mask_dilate, mask)
             x = dynconv.bn_relu(self.bn2, None, x, mask)
-            meta["saliency_mask"] = self.get_masked_feature(x, mask.hard)
+            # meta["saliency_mask"] = self.get_masked_feature(x, mask.hard)
+            meta["saliency_mask"] = x #self.get_masked_feature(x, mask.hard)
             x = dynconv.apply_mask(x, mask)
         return (x, meta)
 

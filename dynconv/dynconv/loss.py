@@ -69,6 +69,8 @@ class SparsityCriterion(nn.Module):
 
         for i, mask in enumerate(meta['masks']):
             m_dil, m = mask['dilate'], mask['std']
+            if m is None:
+                continue
             mask_percents.append(m.hard.sum()/m.hard.numel())
 
             layer_perc, c, t = self.calculate_layer_ratio(m_dil, m)

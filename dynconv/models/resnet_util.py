@@ -238,14 +238,14 @@ class Bottleneck(nn.Module):
         else:
             assert meta is not None
             meta["stride"] = self.stride
-            m = self.obtain_mask(self.add_dropout(x.clone(), meta), meta)
-            mask_dilate, mask = m['dilate'], m['std']
-
             if self.channel_budget > 0:
                 vector, meta = self.saliency(x, meta)
                 conv_forward(self.conv1, None, None, vector, forward=False)
                 conv_forward(self.conv2, None, vector, vector, forward=False)
                 conv_forward(self.conv3, None, vector, None, forward=False)
+
+            m = self.obtain_mask(self.add_dropout(x.clone(), meta), meta)
+            mask_dilate, mask = m['dilate'], m['std']
 
             x = dynconv.conv1x1(self.conv1, x, mask_dilate)
             x = dynconv.bn_relu(self.bn1, self.conv1_act, x, mask_dilate)
@@ -259,7 +259,8 @@ class Bottleneck(nn.Module):
 
             x = dynconv.conv1x1(self.conv3, x, mask)
             x = dynconv.bn_relu(self.bn3, None, x, mask)
-            meta["saliency_mask"] = self.get_saliency_mask(x, mask.hard)
+            # meta["saliency_mask"] = self.get_saliency_mask(x, mask.hard)
+            meta["saliency_mask"] = x
             out = identity + dynconv.apply_mask(x, mask)
 
         meta["block_id"] += 1
