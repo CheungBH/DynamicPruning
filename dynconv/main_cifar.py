@@ -484,9 +484,8 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
     if file_path:
         with open(file_path, "a+") as f:
             f.write("Validation: Epoch {}, Prec@1 {}, Prec@5 {}, task loss {}, sparse loss {}, ave FLOPS per image: {} MMac\n".
-                    format(epoch, round(top1.avg, 4), round(top1.avg, 4), round(top5.avg, 4),
-                           round(task_loss_record.avg, 4), round(spatial_loss_record.avg, 4),
-                           round(model.compute_average_flops_cost()[0]/1e6), 6))
+                    format(epoch, round(top1.avg, 4), round(top5.avg, 4), round(task_loss_record.avg, 4),
+                           round(spatial_loss_record.avg, 4), round(model.compute_average_flops_cost()[0]/1e6), 6))
             f.write("Validation Spatial percentage: {}\n".format(spatial_layer_str))
             f.write("Validation Channel percentage: {}\n".format(channel_layer_str))
 
