@@ -260,9 +260,8 @@ class Bottleneck(nn.Module):
             x = dynconv.conv1x1(self.conv3, x, mask)
             x = dynconv.bn_relu(self.bn3, None, x, mask)
             # meta["saliency_mask"] = self.get_saliency_mask(x, mask.hard)
-            meta["saliency_mask"] = x
             out = identity + dynconv.apply_mask(x, mask)
-
+            meta["saliency_mask"] = x
         meta["block_id"] += 1
         out = self.relu(out)
         return out, meta
