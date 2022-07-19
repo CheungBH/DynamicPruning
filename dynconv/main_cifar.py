@@ -397,9 +397,9 @@ def train(args, train_loader, model, criterion, optimizer, epoch, file_path):
             logger.tick(f)
             f.write("Train: LR {}, gumbel temp {}, gumbel noise {}\n".format(
                 round(optimizer.param_groups[0]["lr"], 4), gumbel_temp, gumbel_noise))
-            f.write("Train: Epoch {}, Prec@1 {}, Prec@5 {}, task loss {}, sparse loss {}\n".format
+            f.write("Train: Epoch {}, Prec@1 {}, Prec@5 {}, task loss {}, spatial loss {}, channel loss {}\n".format
                     (epoch, round(top1.avg, 4), round(top5.avg, 4), round(task_loss_record.avg, 4),
-                     round(spatial_loss_record.avg, 4)))
+                     round(spatial_loss_record.avg, 4), round(channel_loss_record.avg, 4)))
             f.write("Train Spatial Percentage: {}\n".format(spatial_layer_str))
             f.write("Train Channel Percentage: {}\n".format(channel_layer_str))
 
@@ -483,9 +483,9 @@ def validate(args, val_loader, model, criterion, epoch, file_path=None):
     model.stop_flops_count()
     if file_path:
         with open(file_path, "a+") as f:
-            f.write("Validation: Epoch {}, Prec@1 {}, Prec@5 {}, task loss {}, sparse loss {}, ave FLOPS per image: {} MMac\n".
-                    format(epoch, round(top1.avg, 4), round(top5.avg, 4), round(task_loss_record.avg, 4),
-                           round(spatial_loss_record.avg, 4), round(model.compute_average_flops_cost()[0]/1e6), 6))
+            f.write("Validation: Epoch {}, Prec@1 {}, Prec@5 {}, task loss {}, spatial loss {}, channel loss {}\n".format
+                    (epoch, round(top1.avg, 4), round(top5.avg, 4), round(task_loss_record.avg, 4),
+                     round(spatial_loss_record.avg, 4), round(channel_loss_record.avg, 4)))
             f.write("Validation Spatial percentage: {}\n".format(spatial_layer_str))
             f.write("Validation Channel percentage: {}\n".format(channel_layer_str))
 

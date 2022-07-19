@@ -5,12 +5,12 @@ from torchvision import transforms
 from math import cos, pi
 
 
-def set_gumbel(temps, intervals, epoch_ratio, remove_gumbel):
+def set_gumbel(intervals, temps, epoch_ratio, remove_gumbel):
     assert len(intervals) == len(temps), "Please reset your gumbel"
     len_gumbel = len(intervals)
     gumbel_temp = temps[-1]
     for idx in range(len(intervals)):
-        if intervals[len_gumbel-idx-1] < epoch_ratio:
+        if intervals[len_gumbel-idx-1] > epoch_ratio:
             gumbel_temp = temps[len_gumbel-idx-1]
         else:
             break
