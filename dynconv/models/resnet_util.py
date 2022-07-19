@@ -87,7 +87,7 @@ class Bottleneck(nn.Module):
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1, base_width=64, dilation=1,
                  norm_layer=None, sparse=False, resolution_mask=False, mask_block=False, mask_type="conv",
                  save_feat=False, input_resolution=False, conv1_act="relu", channel_budget=-1, channel_unit_type="fc",
-                 group_size=1, dropout_ratio=0, dropout_stages=[-1], budget=-1, **kwargs):
+                 group_size=1, dropout_ratio=0, dropout_stages=[-1], budget=-1, before_residual=False, **kwargs):
         super(Bottleneck, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
@@ -125,6 +125,7 @@ class Bottleneck(nn.Module):
         self.spatial_budget = budget
         self.dropout_ratio = dropout_ratio
         self.dropout_stages = dropout_stages
+        self.before_residual = before_residual
 
         if sparse:
             if channel_budget >= 0:
@@ -261,7 +262,7 @@ class Bottleneck(nn.Module):
             x = dynconv.bn_relu(self.bn3, None, x, mask)
             # meta["saliency_mask"] = self.get_saliency_mask(x, mask.hard)
             out = identity + dynconv.apply_mask(x, mask)
-            meta["saliency_mask"] = x
+            meta["saliency_mask"] = x if self.before_residual else out
         meta["block_id"] += 1
         out = self.relu(out)
         return out, meta
