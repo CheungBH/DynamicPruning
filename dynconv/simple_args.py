@@ -53,6 +53,7 @@ class SimpleArguments:
 
         # if not args.evaluate:
         if args.load == "pretrain":
+            print("Replacing weight checkpoint: {} -> {}".format(args.load, self.pretrain_weight))
             args.load = self.pretrain_weight
         elif self.load_weight and args.load == "default":
             print("Replacing weight checkpoint: {} -> {}".format(args.load, self.load_weight))
