@@ -68,6 +68,7 @@ def main():
     parser.add_argument('--channel_stage', nargs="+", type=int, help='target stage for pretrain mask')
     parser.add_argument('--channel_loss_weight', type=float, default=1e-8)
     parser.add_argument('--before_residual', action='store_true', help='loss without lower constraints')
+    parser.add_argument('--full_feature', action='store_true', help='loss without lower constraints')
 
     # model
     parser.add_argument('--model', type=str, default='resnet101', help='network model name')
@@ -131,7 +132,7 @@ def main():
                        channel_unit_type=args.channel_unit_type, channel_stage=args.channel_stage,
                        dropout_stages=args.dropout_stages, dropout_ratio=args.dropout_ratio,
                        use_downsample=args.use_downsample, final_activation=args.final_activation,
-                       before_residual=args.before_residual).to(device=device)
+                       before_residual=args.before_residual, full_feature=args.full_feature).to(device=device)
 
     meta = {'masks': [], 'device': device, 'gumbel_temp': 5.0, 'gumbel_noise': False, 'epoch': 0,
             "feat_before": [], "feat_after": [], "lasso_sum": torch.zeros(1).cuda(), "channel_prediction": {}}

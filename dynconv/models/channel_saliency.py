@@ -41,37 +41,39 @@ def expand(x, group_size):
     return x.unsqueeze(dim=-1).expand(bs, vec_size, group_size).reshape(bs, vec_size*group_size)
 
 
+def get_pooling(method, full):
+    if method == "max":
+        return nn.AdaptiveMaxPool2d(1) if full else MaskedMaxPooling()
+    else:
+        return nn.AdaptiveAvgPool2d(1) if full else MaskedAvePooling()
+
+
 class GumbelChannelUnit(nn.Module):
     '''
         Attention Mask.
     '''
 
-    def __init__(self, inplanes, outplanes, group_size=4, eps=0.66667, budget=-1, bias=-1, channel_stage=[-1], **kwargs):
+    def __init__(self, inplanes, outplanes, group_size=4, eps=0.66667, budget=-1, bias=-1, channel_stage=[-1],
+                 full_feature=False, pooling_method="max", **kwargs):
         super(GumbelChannelUnit, self).__init__()
-        # Parameter
-        # self.bottleneck = inplanes // fc_reduction
+        self.full_feature = full_feature
         self.inplanes, self.outplanes = inplanes, outplanes
         self.eleNum_c = torch.Tensor([outplanes])
         # channel attention
-        self.pooling = MaskedAvePooling()
+        self.pooling = get_pooling(pooling_method, full_feature)
         self.channel_saliency_predictor = nn.Linear(inplanes, outplanes//group_size)
         self.target_stage = channel_stage
         self.group_size = group_size
-
-        # if bias >= 0:
-        #     nn.init.constant_(self.atten_c[3].bias, bias)
-        # Gate
         self.gumbel = GumbelSoftmax(eps=eps)
-        # Norm
-        # self.norm = lambda x: torch.norm(x, p=1, dim=(1, 2, 3))
 
     def forward(self, x, meta):
         if meta["stage_id"] not in self.target_stage:
             return torch.ones(x.shape[0], self.outplanes).cuda(), meta
         batch, channel, _, _ = x.size()
-        context = self.pooling(meta["saliency_mask"], meta["masks"][-1]["std"]).view(batch, -1)
+        context = self.pooling(meta["saliency_mask"], meta["masks"][-1]["std"]) if not self.full_feature \
+            else self.pooling(x)
+        context = context.view(batch, -1)
         # transform
-        # context = context.unsqueeze(dim=0) if batch == 1 else context
         c_in = self.channel_saliency_predictor(context)  # [N, C_out, 1, 1]
         # channel gate
         mask_c = self.gumbel(c_in)  # [N, C_out, 1, 1]
@@ -110,9 +112,10 @@ class MaskedMaxPooling(nn.Module):
 
 class ChannelVectorUnit(nn.Module):
     def __init__(self, in_channels, out_channels, group_size=1, pooling_method="ave", channel_budget=1.0,
-                 channel_stage=[-1], **kwargs):
+                 channel_stage=[-1], full_feature=False, **kwargs):
         super(ChannelVectorUnit, self).__init__()
-        self.pooling = MaskedMaxPooling() if pooling_method == "max" else MaskedAvePooling()
+        self.full_feature = full_feature
+        self.pooling = self.get_pooling(pooling_method, full_feature)
         self.out_channels = out_channels
         self.group_size = group_size
         # assert out_channels % group_size == 0, "The channels are not grouped with the same size"
@@ -126,11 +129,12 @@ class ChannelVectorUnit(nn.Module):
     def forward(self, x, meta):
         if meta["stage_id"] not in self.target_stage:
             return torch.ones(x.shape[0], self.out_channels).cuda(), meta
-        x = self.pooling(meta["saliency_mask"], meta["masks"][-1]["std"]).squeeze()
+        x = self.pooling(meta["saliency_mask"], meta["masks"][-1]["std"]) if not self.full_feature else self.pooling(x)
+        x = x.view(x.shape[0], -1)
         x = self.channel_saliency_predictor(x)
         x = self.sigmoid(x)
         meta["lasso_sum"] += torch.mean(torch.sum(x, dim=-1))
-        x = x.unsqueeze(dim=0) if len(x.shape) == 1 else x
+        # x = x.unsqueeze(dim=0) if len(x.shape) == 1 else x
         x = self.winner_take_all(x.clone())
         meta["channel_prediction"][(meta["stage_id"], meta["block_id"])] = x
         x = self.expand(x)
