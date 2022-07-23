@@ -115,7 +115,7 @@ class ChannelVectorUnit(nn.Module):
                  channel_stage=[-1], full_feature=False, **kwargs):
         super(ChannelVectorUnit, self).__init__()
         self.full_feature = full_feature
-        self.pooling = self.get_pooling(pooling_method, full_feature)
+        self.pooling = get_pooling(pooling_method, full_feature)
         self.out_channels = out_channels
         self.group_size = group_size
         # assert out_channels % group_size == 0, "The channels are not grouped with the same size"
