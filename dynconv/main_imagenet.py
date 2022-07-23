@@ -94,7 +94,7 @@ def main():
     #gumbel args
     parser.add_argument('--remove_gumbel', default=0.8, type=float, help='The numerical threshold of mask')
     parser.add_argument('--gumbel_interval', nargs="+", type=float, default=[0.5, 0.8, 1], help='gumbel interval')
-    parser.add_argument('--gumbel_temp', nargs="+", type=float, default=[2.5, 1, 0.6667], help='gumbel value')
+    parser.add_argument('--gumbel_temp', nargs="+", type=float, default=[5, 2.5, 1], help='gumbel value')
 
     # file management
     parser.add_argument('-s', '--save_dir', type=str, default='', help='directory to save model')
